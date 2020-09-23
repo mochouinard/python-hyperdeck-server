@@ -11,3 +11,4 @@ You can now connect to your computer IP address to port 9993 which is the standa
 Required packages :
 Python3
 python-vlc
+ffmpeg (for ffprobe)
