@@ -118,8 +118,11 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while True:
-            data = str(self.request.recv(1500), 'ascii')
-            print(data)
+            n = self.request.recv(1500)
+            if n == b'':
+                break
+            print(n)
+            data = str(n, 'ascii')
             self.process(data)
 
     def list_media(self):
@@ -140,13 +143,13 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     if s[0] == 'speed':
                         rate = int(s[1].strip())
                         self.hd.set_rate(rate/100) 
-                response = bytes("200 ok\n", 'ascii')
+                response = bytes("200 ok\r\n", 'ascii')
                 #single clip: true
                 #loop: false
                 #speed: 100
             elif s[0] == 'stop':
                 self.hd.pause()
-                response = bytes("200 ok\n", 'ascii')
+                response = bytes("200 ok\r\n", 'ascii')
 
             elif s[0] == 'goto':
                 s2 = s[1].strip().split(":", 1)
@@ -160,27 +163,61 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                         clipid = int(s2[1].strip())
                         self._active_clip = clipid-1
                     self.hd.load("videos/" + self._files[self._active_clip])
-                    response = bytes("200 ok\n", 'ascii')
+                    response = bytes("200 ok\r\n", 'ascii')
                 else:
-                    response = bytes("100 syntax error\n", 'ascii')
+                    response = bytes("100 syntax error\r\n", 'ascii')
                 goto: cl
-            elif s[0] == 'clips get':
-                out = "205 clips info:\n"
+            elif s[0] == 'slot info':
+                s2 = s[1].strip().split(":", 1)
+                if s2[0] == 'slot id':
+                    out = "202 slot info:\r\n"
+                    out += "slot id: " + s2[1].strip() + "\r\n"
+                    out += "status: empty\r\n"
+                    out += "volume name: test\r\n"
+                    out += "recording time: 100\r\n"
+                    out += "video format: 4Kp24\r\n"
+                    out += "\r\n"
+                    response = bytes(out, 'ascii')
+            elif s[0] == 'clips count':
                 fl = self.list_media()
-                out += "clip count: " + str(len(fl)) + "\n"
+                out = "214 clips count:\r\n"
+                fl = []
+                out += "clip count: " + str(len(fl)) + "\r\n"
+                out += "\r\n"
+                response = bytes(out, 'ascii')
+            elif s[0] == 'clips get':
+                out = "205 clips info:\r\n"
+                fl = self.list_media()
+                fl = [fl[0]]
+                out += "clip count: " + str(len(fl)) + "\r\n"
                 at = 0
-                for f in self.list_media():
+                for f in fl:
                     at += 1
                     (width, height, duration, fps) = self.findVideoMetada('videos/' + f)
                     fps_s = fps.split('/')
                     fps_out = int(fps_s[0]) / int(fps_s[1])
                     (h,m,s,fr) = self.hd.time_to_timecode(duration, fps_out)
                     tc = f'{h:02}:{m:02}:{s:02}:{fr:02}'
-                    print(at, f,tc)
-                    out += str(at) + ": " + f + " 01:00:00:00 " + tc + "\n" 
+                    f = 'aaa'
+                    out += str(at) + ": " + f + " 01:00:00:00 " + tc + "\r\n" 
                 out += "\r\n"
                 response = bytes(out, 'ascii')
-                print (response)
+            elif s[0] == 'notify':
+                response = bytes("""209 notify\r\n""", 'ascii')
+                bytes("""
+transport: true
+slot: true
+remote: true
+configuration: false
+
+
+""", 'ascii')
+            elif s[0] == 'remote':
+                out = "210 remote info:\r\n"
+                out += "enabled: false\r\n"
+                out += "override: false\r\n"
+                out += "\r\n"
+                response = bytes(out, 'ascii')
             elif s[0] == 'transport info':
                 """208 transport info:↵
 	
@@ -198,21 +235,24 @@ loop: {“true”, “false”}↵
                     state = 'play'
                 else:
                     state = 'stopped'
+                speed = str(int(self.hd.get_rate() * 100))
+                speed = "0"
                 (h,m,s,f) = self.hd.time_to_timecode(self.hd.get_time(), self.hd.get_fps())
                 tc = f'{h:02}:{m:02}:{s:02}:{f:02}'
-                response = bytes("""208 transport info:
-status: """ + state + """
-speed: """ + str(self.hd.get_rate()) + """
-slot id: none
-display timecode: """ + tc + """
-timecode: """ + tc + """
-clip id: none
-video format: 1080p30
-loop: "false"
-
-""", 'ascii')
+                out = "208 transport info:\r\n"
+                out += 'status: ' + state + '\r\n'
+                out += "speed: " + speed + "\r\n"
+                out += "slot id: none\r\n"
+                out += "display timecode: " + tc + "\r\n"
+                out += "timecode: " + tc + "\r\n"
+                out += "clip id: none\r\n"
+                out += "video format: 4Kp24\r\n"
+                out += "loop: false\r\n"
+                out += "\r\n"
+                response = bytes(out, 'ascii')
             else :
-                response = bytes("100 syntax error\n", 'ascii')
+                response = bytes("200 ok\r\n", 'ascii')#100 syntax error\n", 'ascii')
+            print(response)
             self.request.sendall(response)
 
 #        cur_thread = threading.current_thread()
