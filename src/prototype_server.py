@@ -11,6 +11,8 @@ import subprocess
 import shlex
 import json
 
+import re
+
 class HyperDeckPlayer():
     
     def __init__(self):
@@ -46,11 +48,11 @@ class HyperDeckPlayer():
         finish = 1
     def poschanged(self, event):
         pass#print(time)
-    def ePlaying(self):
+    def ePlaying(self, event):
         pass#self.is_playing = True
-    def eStopped(self):
+    def eStopped(self, event):
         pass#self.is_playing = False
-    def ePaused(self):
+    def ePaused(self, event):
         pass#self.is_playing = False
     def is_playing(self):
         return self._player.is_playing()
@@ -94,6 +96,53 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     hd =  HyperDeckPlayer()
     _files = []
     _active_clip = None
+    def parseArg(self, arg):
+        return re.findall('([a-zA-Z][^:]+): ([^ ]+)', arg)
+
+    def ActiveClip(self):
+        if self._active_clip:
+            return str(self._active_clip)
+        else:
+            return 'none'
+
+    def buildSlotInfo(self, slot_id):
+        if slot_id:
+            out = ""
+            out += "slot id: " + str(slot_id) + "\r\n"
+            out += "status: mounted\r\n"
+            out += "volume name: test\r\n"
+            out += "recording time: 0\r\n"
+            out += "video format: 1080p30\r\n"
+            return out
+        return None
+    def buildRemote(self):
+        out = ""
+        out += "enabled: true\r\n"
+        out += "override: false\r\n"
+        return out
+
+    def buildTransportInfo(self):
+        if self.hd.is_playing():
+            state = 'play'
+        else:
+            state = 'stopped'
+        rate = int(self.hd.get_rate())
+        if rate == 0:
+            rate = 1;
+        print ("XXXXXXX", self.hd.get_rate())
+        speed = str(int(self.hd.get_rate() * 100))
+        (h,m,s,f) = self.hd.time_to_timecode(self.hd.get_time(), self.hd.get_fps())
+        tc = f'{h:02}:{m:02}:{s:02}:{f:02}'
+        out = ""
+        out += 'status: ' + state + '\r\n'
+        out += "speed: " + speed + "\r\n"
+        out += "slot id: 1\r\n"
+        out += "display timecode: " + tc + "\r\n"
+        out += "timecode: " + tc + "\r\n"
+        out += "clip id: " + self.ActiveClip() + "\r\n"
+        out += "video format: 1080p30\r\n"
+        out += "loop: false\r\n"
+        return out
 
     def findVideoMetada(self, pathToInputVideo):
         cmd = "ffprobe -v quiet -print_format json -show_streams"
@@ -117,6 +166,13 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         return width, height, duration, fps
 
     def handle(self):
+        out = "500 connection info:\r\n"
+        out += "protocol version: 1.6\r\n"
+        out += "model: Python Hyperdeck Server\r\n"
+        out += "\r\n"
+        response = bytes(out, 'ascii')
+        self.request.sendall(response)
+
         while True:
             n = self.request.recv(1500)
             if n == b'':
@@ -138,11 +194,23 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             s = data.strip().split(":", 1)
             if s[0] == 'play':
                 self.hd.play()
-                for line in lines:
-                    s = line.strip().split(':', 1)
-                    if s[0] == 'speed':
-                        rate = int(s[1].strip())
-                        self.hd.set_rate(rate/100) 
+                if s[1]:
+                    a = self.parseArg(s[1].strip())
+                    for arg in a:
+                        (param, val) = arg
+                        if param == 'speed':
+                            if val.strip() == '0':
+                                self.hd.pause()
+                            rate = int(val.strip())
+                            self.hd.set_rate(rate/100)
+                    pass
+                else:
+                    for line in lines:
+                        s = line.strip().split(':', 1)
+                        if s[0] == 'speed':
+                            rate = int(s[1].strip())
+                            self.hd.set_rate(rate/100)
+
                 response = bytes("200 ok\r\n", 'ascii')
                 #single clip: true
                 #loop: false
@@ -161,8 +229,8 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
                     else:
                         clipid = int(s2[1].strip())
-                        self._active_clip = clipid-1
-                    self.hd.load("videos/" + self._files[self._active_clip])
+                        self._active_clip = clipid
+                    self.hd.load("videos/" + self._files[self._active_clip-1])
                     response = bytes("200 ok\r\n", 'ascii')
                 else:
                     response = bytes("100 syntax error\r\n", 'ascii')
@@ -171,51 +239,53 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 s2 = s[1].strip().split(":", 1)
                 if s2[0] == 'slot id':
                     out = "202 slot info:\r\n"
-                    out += "slot id: " + s2[1].strip() + "\r\n"
-                    out += "status: empty\r\n"
-                    out += "volume name: test\r\n"
-                    out += "recording time: 100\r\n"
-                    out += "video format: 4Kp24\r\n"
+                    out += self.buildSlotInfo(s2[1].strip())
                     out += "\r\n"
                     response = bytes(out, 'ascii')
             elif s[0] == 'clips count':
                 fl = self.list_media()
                 out = "214 clips count:\r\n"
-                fl = []
                 out += "clip count: " + str(len(fl)) + "\r\n"
                 out += "\r\n"
                 response = bytes(out, 'ascii')
             elif s[0] == 'clips get':
+                s2 = s[1].strip().split(":", 1)
+
                 out = "205 clips info:\r\n"
                 fl = self.list_media()
-                fl = [fl[0]]
-                out += "clip count: " + str(len(fl)) + "\r\n"
-                at = 0
+                print (s)
+                at = 1
+                if s2[0] == 'clip id':
+                    clip_id = int(s2[1].strip())
+                    fl = [fl[clip_id-1]]
+                    at = clip_id
+                else:
+                    out += "clip count: " + str(len(fl)) + "\r\n"
                 for f in fl:
-                    at += 1
+                    print (f)
                     (width, height, duration, fps) = self.findVideoMetada('videos/' + f)
                     fps_s = fps.split('/')
                     fps_out = int(fps_s[0]) / int(fps_s[1])
                     (h,m,s,fr) = self.hd.time_to_timecode(duration, fps_out)
                     tc = f'{h:02}:{m:02}:{s:02}:{fr:02}'
-                    f = 'aaa'
-                    out += str(at) + ": " + f + " 01:00:00:00 " + tc + "\r\n" 
+                    f = 'video' + str(at) + '.mp4'
+                    out += str(at) + ":  " + f + " 00:00:00:00 " + tc + "\r\n" 
+                    at += 1
                 out += "\r\n"
                 response = bytes(out, 'ascii')
             elif s[0] == 'notify':
-                response = bytes("""209 notify\r\n""", 'ascii')
+                response = bytes("""200 ok\r\n""", 'ascii')
                 bytes("""
-transport: true
-slot: true
-remote: true
+transport: false
+slot: false
+remote: false
 configuration: false
 
 
 """, 'ascii')
             elif s[0] == 'remote':
                 out = "210 remote info:\r\n"
-                out += "enabled: false\r\n"
-                out += "override: false\r\n"
+                out += self.buildRemote()
                 out += "\r\n"
                 response = bytes(out, 'ascii')
             elif s[0] == 'transport info':
@@ -231,30 +301,33 @@ clip id: {Clip ID or “none”}↵
 video format: {Video format}↵
 loop: {“true”, “false”}↵
 ↵""" # https://youtu.be/4CxXM_YlAqc?t=416
-                if self.hd.is_playing():
-                    state = 'play'
-                else:
-                    state = 'stopped'
-                speed = str(int(self.hd.get_rate() * 100))
-                speed = "0"
-                (h,m,s,f) = self.hd.time_to_timecode(self.hd.get_time(), self.hd.get_fps())
-                tc = f'{h:02}:{m:02}:{s:02}:{f:02}'
                 out = "208 transport info:\r\n"
-                out += 'status: ' + state + '\r\n'
-                out += "speed: " + speed + "\r\n"
-                out += "slot id: none\r\n"
-                out += "display timecode: " + tc + "\r\n"
-                out += "timecode: " + tc + "\r\n"
-                out += "clip id: none\r\n"
-                out += "video format: 4Kp24\r\n"
-                out += "loop: false\r\n"
+                out += self.buildTransportInfo()
                 out += "\r\n"
                 response = bytes(out, 'ascii')
             else :
                 response = bytes("200 ok\r\n", 'ascii')#100 syntax error\n", 'ascii')
             print(response)
             self.request.sendall(response)
+            """
+            out = "508 transport info:\r\n"
+            out += self.buildTransportInfo()
+            out += "\r\n"
+            response = bytes(out, 'ascii')
+            self.request.sendall(response)
 
+            out = "502 slot info:\r\n"
+            out += self.buildSlotInfo(1)
+            out += "\r\n"
+            response = bytes(out, 'ascii')
+            self.request.sendall(response)
+
+            out = "510 remote info:\r\n"
+            out += self.buildRemote()
+            out += "\r\n"
+            response = bytes(out, 'ascii')
+            self.request.sendall(response)
+            """
 #        cur_thread = threading.current_thread()
 #        response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
 #        self.request.sendall(response)
