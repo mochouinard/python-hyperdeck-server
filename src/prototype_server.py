@@ -268,7 +268,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     fps_out = int(fps_s[0]) / int(fps_s[1])
                     (h,m,s,fr) = self.hd.time_to_timecode(duration, fps_out)
                     tc = f'{h:02}:{m:02}:{s:02}:{fr:02}'
-                    f = 'video' + str(at) + '.mp4'
+                    #f = 'video' + str(at) + '.mp4'
                     out += str(at) + ":  " + f + " 00:00:00:00 " + tc + "\r\n" 
                     at += 1
                 out += "\r\n"
