@@ -12,3 +12,12 @@ Required packages :
 Python3
 python-vlc
 ffmpeg (for ffprobe)
+videolan
+
+
+Python PIP:
+python-vlc can be installed using pip3 software
+Install on Linux : # apt install python3 pip3
+Install on Windows : 
+Install on OSX : https://evansdianga.com/install-pip-osx/
+

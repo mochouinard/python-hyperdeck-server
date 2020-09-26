@@ -75,7 +75,6 @@ class HyperDeckPlayer():
         events.event_attach(vlc.EventType.MediaPlayerPositionChanged, self.poschanged)
 
         self._player.play()
-        #    self._player.pause()
         print ("NEXT")
         #self._player.set_pause(1)
         #self._player.next_frame()
@@ -94,7 +93,7 @@ class HyperDeckPlayer():
 
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
     hd =  HyperDeckPlayer()
-    _files = []
+    _files = None
     _active_clip = None
     def parseArg(self, arg):
         return re.findall('([a-zA-Z][^:]+): ([^ ]+)', arg)
@@ -129,7 +128,6 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         rate = int(self.hd.get_rate())
         if rate == 0:
             rate = 1;
-        print ("XXXXXXX", self.hd.get_rate())
         speed = str(int(self.hd.get_rate() * 100))
         (h,m,s,f) = self.hd.time_to_timecode(self.hd.get_time(), self.hd.get_fps())
         tc = f'{h:02}:{m:02}:{s:02}:{f:02}'
@@ -143,7 +141,10 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         out += "video format: 1080p30\r\n"
         out += "loop: false\r\n"
         return out
-
+    def ffprobeFind(self, data, field):
+        for item in data['streams']:
+            if field in item:
+                return item[field]
     def findVideoMetada(self, pathToInputVideo):
         cmd = "ffprobe -v quiet -print_format json -show_streams"
         args = shlex.split(cmd)
@@ -158,11 +159,12 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         #pp.pprint(ffprobeOutput)
     
         # for example, find height and width
+        print(ffprobeOutput)
         height = ffprobeOutput['streams'][0]['height']
         width = ffprobeOutput['streams'][0]['width']
-        duration = ffprobeOutput['streams'][2]['duration_ts']
+        duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
         fps = ffprobeOutput['streams'][0]['avg_frame_rate']
-        print(width, height, duration, fps)
+        #print(width, height, duration, fps)
         return width, height, duration, fps
 
     def handle(self):
@@ -177,18 +179,21 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             n = self.request.recv(1500)
             if n == b'':
                 break
-            print(n)
+            print('Recv: ', n)
             data = str(n, 'ascii')
             self.process(data)
+    def get_media(self, clip_id):
+        return self._files[clip_id-1]
 
     def list_media(self):
-        self._files = os.listdir('videos')
+        if self._files == None:
+            self._files = os.listdir('videos')
+
         return self._files
     def process(self, data_recv):
         lines = data_recv.split('\n')
         data = lines[0]
         if 1==1:
-            print (data)
             cur_thread = threading.current_thread()
             response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
             s = data.strip().split(":", 1)
@@ -230,7 +235,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                     else:
                         clipid = int(s2[1].strip())
                         self._active_clip = clipid
-                    self.hd.load("videos/" + self._files[self._active_clip-1])
+                    self.hd.load("videos/" + self.get_media(self._active_clip))
                     response = bytes("200 ok\r\n", 'ascii')
                 else:
                     response = bytes("100 syntax error\r\n", 'ascii')
@@ -249,13 +254,15 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
                 out += "\r\n"
                 response = bytes(out, 'ascii')
             elif s[0] == 'clips get':
-                s2 = s[1].strip().split(":", 1)
+                if len(s) == 1:
+                    s2 = None
+                else:
+                    s2 = s[1].strip().split(":", 1)
 
                 out = "205 clips info:\r\n"
                 fl = self.list_media()
-                print (s)
                 at = 1
-                if s2[0] == 'clip id':
+                if s2 and s2[0] == 'clip id':
                     clip_id = int(s2[1].strip())
                     fl = [fl[clip_id-1]]
                     at = clip_id
@@ -307,7 +314,7 @@ loop: {“true”, “false”}↵
                 response = bytes(out, 'ascii')
             else :
                 response = bytes("200 ok\r\n", 'ascii')#100 syntax error\n", 'ascii')
-            print(response)
+            print('sent: ', response)
             self.request.sendall(response)
             """
             out = "508 transport info:\r\n"
