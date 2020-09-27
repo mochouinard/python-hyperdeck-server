@@ -30,7 +30,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             return 'none'
 
     def load_clip(self, clip_id):
-        self.hd.load("videos/" + self.get_media(self._active_clip)
+        self.hd.load("videos/" + self.get_media(self._active_clip))
 
     def buildSlotInfo(self, slot_id):
         if slot_id:
