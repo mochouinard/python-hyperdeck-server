@@ -1,6 +1,10 @@
 videos/*
-!videos/SampleVideo_1280x720_10mb.mp4
-
+!videos/video_sampleclip.mp4
+!videos/stream_Ads_Chrome1.url
+!videos/stream_Ads_Chrome2.url
+!videos/stream_Blender_Sintel.url
+!videos/stream_Blender_TearsOfSteel.url
+!videos/picture_runway.jpg
 src/*.swp
 src/__pycache__/
 

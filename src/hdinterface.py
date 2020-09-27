@@ -38,7 +38,12 @@ class HyperDeckInterface:
         return self._files
     
     def load_clip(self, clip_id):
-        self.hd.load("videos/" + self.get_media(clip_id))
+        vid = "videos/" + self.get_media(clip_id)
+        if vid.endswith(".url"):
+            with open(vid, 'r') as reader:
+                vid = reader.readline().strip()
+        print ("TTTTTTTTTTTTTTTTTTTTTTTTT", vid)
+        self.hd.load(vid)
         self._active_clip = clip_id
 
     def buildRemote(self):
@@ -94,10 +99,10 @@ class HyperDeckInterface:
 
             # for example, find height and width
             print(ffprobeOutput)
-            height = ffprobeOutput['streams'][0]['height']
-            width = ffprobeOutput['streams'][0]['width']
+            height = self.ffprobeFind(ffprobeOutput, 'height')
+            width = self.ffprobeFind(ffprobeOutput, 'width')
             duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
-            fps = ffprobeOutput['streams'][0]['avg_frame_rate']
+            fps = self.ffprobeFind(ffprobeOutput, 'avg_frame_rate')
             #print(width, height, duration, fps)
             return width, height, duration, fps
         except subprocess.CalledProcessError as e:

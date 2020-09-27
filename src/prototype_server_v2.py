@@ -182,12 +182,17 @@ class HDServer:
                 else:
                     response.append("clip count: " + str(len(fl)))
                 for f in fl:
-                    (width, height, duration, fps, fps_out) = (0,0,0,0,0)
+                    (width, height, duration, fps, fps_out) = (0,0,0,0,24)
                     meta = self.hdi.findClipMetadata(at)
                     if meta:
                         (width, height, duration, fps) = meta
-                        fps_s = fps.split('/')
-                        fps_out = int(fps_s[0]) / int(fps_s[1])
+                        if fps != 0 and fps != "0/0":
+                            print ("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", fps)
+                            fps_s = fps.split('/')
+                            fps_out = int(fps_s[0]) / int(fps_s[1])
+                        else:
+                            fps_out = 24
+                            duration = 1000
                     (h,m,s,fr) = self.hdi.hd.time_to_timecode(duration, fps_out)
                     tc = f'{h:02}:{m:02}:{s:02}:{fr:02}'
                     #f = 'video' + str(at) + '.mp4'
