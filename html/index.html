@@ -1,0 +1,28 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>The HTML5 </title>
+  <meta name="description" content="HTML5 Test">
+  <meta name="author" content="Moc">
+
+  <!--<link rel="stylesheet" href="css/styles.css?v=1.0">-->
+    </head>
+    <body>
+        <script>
+            var ws = new WebSocket("ws://127.0.0.1:8765/"),
+                messages = document.createElement('ul');
+            ws.onmessage = function (event) {
+		    console.log(event.data);
+                var messages = document.getElementsByTagName('ul')[0],
+                    message = document.createElement('li'),
+                    content = document.createTextNode(event.data);
+                message.appendChild(content);
+                messages.appendChild(message);
+            };
+            document.body.appendChild(messages);
+        </script>
+    </body>
+</html>
