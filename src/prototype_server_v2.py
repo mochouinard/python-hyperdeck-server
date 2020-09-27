@@ -211,8 +211,6 @@ class HDServer:
             elif cmd == 'notify':
                 response = ["200 ok"]
 
-""", 'ascii')
-
             await client.send(response)
             print(f"Send: {response!r}")
 
