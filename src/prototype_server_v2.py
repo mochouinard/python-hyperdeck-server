@@ -162,7 +162,7 @@ class HDServer:
                                 self.hdi.buildSlotInfo(int(slot_id))
                                 ]
             elif cmd == 'clips count':
-                fl = self.hd.list_media()
+                fl = self.hdi.list_media()
                 response = [
                         "214 clips count:",
                         "clip count: " + str(len(fl))
