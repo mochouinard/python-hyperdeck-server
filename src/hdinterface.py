@@ -83,21 +83,23 @@ class HyperDeckInterface:
         args = shlex.split(cmd)
         args.append(pathToInputVideo)
         # run the ffprobe process, decode stdout into utf-8 & convert to JSON
-        ffprobeOutput = subprocess.check_output(args).decode('utf-8')
-        ffprobeOutput = json.loads(ffprobeOutput)
+        try:
+            ffprobeOutput = subprocess.check_output(args).decode('utf-8')
+            ffprobeOutput = json.loads(ffprobeOutput)
 
-        # prints all the metadata available:
-        #import pprint
-        #pp = pprint.PrettyPrinter(indent=2)
-        #pp.pprint(ffprobeOutput)
+            # prints all the metadata available:
+            #import pprint
+            #pp = pprint.PrettyPrinter(indent=2)
+            #pp.pprint(ffprobeOutput)
 
-        # for example, find height and width
-        print(ffprobeOutput)
-        height = ffprobeOutput['streams'][0]['height']
-        width = ffprobeOutput['streams'][0]['width']
-        duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
-        fps = ffprobeOutput['streams'][0]['avg_frame_rate']
-        #print(width, height, duration, fps)
-        return width, height, duration, fps
-
-
+            # for example, find height and width
+            print(ffprobeOutput)
+            height = ffprobeOutput['streams'][0]['height']
+            width = ffprobeOutput['streams'][0]['width']
+            duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
+            fps = ffprobeOutput['streams'][0]['avg_frame_rate']
+            #print(width, height, duration, fps)
+            return width, height, duration, fps
+        except subprocess.CalledProcessError as e:
+            print ("ffprobe error stdout output:\n", e.output)
+            return None
