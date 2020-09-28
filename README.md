@@ -19,6 +19,11 @@ ffmpeg (for ffprobe)
 videolan
 
 
+New Additional packages
+pip3 install pyudev
+pip3 install psutil
+
+
 Python PIP:
 python-vlc can be installed using pip3 software
 Install on Linux : # apt install python3 pip3
