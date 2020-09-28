@@ -32,8 +32,8 @@ class HyperDeckInterface:
         return self._files[clip_id-1]
 
     def list_media(self):
-        if self._files == None:
-            self._files = os.listdir('videos')
+        #if self._files == None:
+        self._files = os.listdir('videos')
 
         return self._files
     

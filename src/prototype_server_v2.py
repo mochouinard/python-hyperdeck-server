@@ -14,20 +14,31 @@ from aiohttp import web
 from hdinterface import HyperDeckInterface
 
 import re
-
-async def ws_handler(websocket, path):
-    while True:
-        try:
-            name = await websocket.recv()
-            print(f"< {name}")
-
-            greeting = f"Hello {name}!"
-
-            await websocket.send(greeting)
-            print(f"> {greeting}")
-        except websockets.exceptions.ConnectionClosed:
-            print(f'{websocket.remote_address} lost connection')
-            return
+import os
+import json
+class WS:
+    def __init__(self, hdi):
+        self.hdi = hdi
+    async def handler(self, websocket, path):
+        while True:
+            response = {'error': 'unknown command'}
+            try:
+                data = await websocket.recv()
+                print(f"< {data}")
+                j = json.loads(data)
+                if j['cmd'] == 'load_list':
+                    response = {'type': 'media_list', 'list': self.hdi.list_media()}
+                elif j['cmd'] == 'delete_media':
+                    if j['filename'] in self.hdi.list_media():
+                        os.remove("videos/" + j['filename'])
+                        response = {'type': 'media_removed', 'filename': j['filename']}
+                    else:
+                        response = {'error': 'Invalid filename'}
+                print (response)
+                await websocket.send(json.dumps(response))
+            except websockets.exceptions.ConnectionClosed:
+                print(f'{websocket.remote_address} lost connection')
+                return
 
 # HTTP:
 async def index_handle(request):
@@ -45,7 +56,31 @@ async def send(writer, arr):
     response = bytes(out, 'ascii')
     writer.write(response)
     await writer.drain()
+async def store_fileupload_handler(request):
 
+    reader = await request.multipart()
+
+    # /!\ Don't forget to validate your inputs /!\
+
+    # reader.next() will `yield` the fields of your form
+    while True:
+        part = await reader.next()
+        if part is None:
+            break
+        print(part.headers)
+        filename = part.filename
+        # You cannot rely on Content-Length if transfer is chunked.
+        size = 0
+        with open(os.path.join('videos/', filename), 'wb') as f:
+            while True:
+                chunk = await part.read_chunk()  # 8192 bytes by default.
+                if not chunk:
+                    break
+                size += len(chunk)
+                f.write(chunk)
+
+    return web.Response(text='{} sized of {} successfully stored'
+                             ''.format(filename, size))
 # HyperDeck Server
 class HDClient:
     def __init__(self, reader, writer):
@@ -73,10 +108,10 @@ class HDClient:
         await self.writer.drain()
 
 class HDServer:
-    hdi = HyperDeckInterface()
 
-    def __init__(self):
+    def __init__(self, hdi):
         self._clients = set()
+        self.hdi = hdi
 
     def parseArg(self, arg):
         return re.findall('([a-zA-Z][^:]+): ([^ ]+)', arg)
@@ -217,20 +252,24 @@ class HDServer:
         print("Close the connection")
         writer.close()
         self._clients.remove(client)
-
+import logging
 async def serve():                                                                                           
     # Telnet
-    hds = HDServer()
+    hdi = HyperDeckInterface()
+
+    hds = HDServer(hdi)
     ts = await asyncio.start_server( hds.new_conn, '', 9993)
   
     addr = ts.sockets[0].getsockname()
     print(f'Serving HyperDeck Server on {addr}')
 
     
+    logging.basicConfig(level=logging.DEBUG)
     #http
     app = aiohttp.web.Application()
     # index, loaded for all application uls.
     app.router.add_get('/', index_handle)
+    app.router.add_post('/upload', store_fileupload_handler)
     app.router.add_static('/videos/', path='videos/', name='static')
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
@@ -238,7 +277,8 @@ async def serve():
     await site.start()
 
     #ws
-    wsserver = await websockets.serve(ws_handler, '', 8765)
+    ws = WS(hdi)
+    wsserver = await websockets.serve(ws.handler, '', 8765)
     await wsserver.wait_closed()
 
 

@@ -1,28 +1,91 @@
-<!doctype html>
-
-<html lang="en">
+<!DOCTYPE html>
 <head>
-  <meta charset="utf-8">
+<meta charset="UTF-8">
+<style>
+.progress-wrapper {
+    width:100%;
+}
+.progress-wrapper .progress {
+    background-color:green;
+    width:0%;
+    padding:5px 0px 5px 0px;
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
+</head>
+<body>
+<script>
+var ws = null;
+function del_media(file) {
+	ws.send(JSON.stringify({'cmd': 'delete_media', 'filename': file}))
 
-  <title>The HTML5 </title>
-  <meta name="description" content="HTML5 Test">
-  <meta name="author" content="Moc">
+}
+$(function() {
+		ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
+		messages = document.createElement('ul');
+		ws.onopen = function(event) {
+			ws.send(JSON.stringify({'cmd': 'load_list'}));
+		}
+		ws.onmessage = function (event) {
+			j = JSON.parse(event.data);
+			if (j['type'] == 'media_removed') {
+				ws.send(JSON.stringify({'cmd': 'load_list'}));
+			}
+			if (j['type'] == 'media_list') {
+				list = '<ul>';
+				$.each(j['list'], function(key, val) {
+					list += '<li>' + val + ' - <a href="javascript:del_media(\'' + val + '\');">delete</a></li>';
+				});
+				list += '</ul>';
+				$("#files").html(list);
+			}
+			/*
+			console.log(event.data);
+			var messages = document.getElementsByTagName('ul')[0],
+				message = document.createElement('li'),
+				content = document.createTextNode(event.data);
+		message.appendChild(content);
+		messages.appendChild(message);
+		*/
+	};
+//	document.body.appendChild(messages);
 
-  <!--<link rel="stylesheet" href="css/styles.css?v=1.0">-->
-    </head>
-    <body>
-        <script>
-            var ws = new WebSocket("ws://127.0.0.1:8765/"),
-                messages = document.createElement('ul');
-            ws.onmessage = function (event) {
-		    console.log(event.data);
-                var messages = document.getElementsByTagName('ul')[0],
-                    message = document.createElement('li'),
-                    content = document.createTextNode(event.data);
-                message.appendChild(content);
-                messages.appendChild(message);
-            };
-            document.body.appendChild(messages);
-        </script>
-    </body>
+});
+
+function postFile() {
+    var formdata = new FormData();
+
+    formdata.append('file1', $('#file1')[0].files[0]);
+
+    var request = new XMLHttpRequest();
+    request.addEventListener("loadend", function(e) {
+	ws.send(JSON.stringify({'cmd': 'load_list'}));
+    });
+    request.upload.addEventListener('progress', function (e) {
+        var file1Size = $('#file1')[0].files[0].size;
+
+        if (e.loaded <= file1Size) {
+            var percent = Math.round(e.loaded / file1Size * 100);
+            $('#progress-bar-file1').width(percent + '%').html(percent + '%');
+        } 
+
+        if(e.loaded == e.total){
+            $('#progress-bar-file1').width(100 + '%').html(100 + '%');
+        }
+    });   
+
+    request.open('post', '/upload');
+    request.timeout = 300000;
+    request.send(formdata);
+}
+</script>
+<form id="form1">
+    <input id="file1" type="file" />
+    <div class="progress-wrapper">
+        <div id="progress-bar-file1" class="progress"></div>
+    </div>
+    <button type="button" onclick="postFile()">Upload File</button>
+</form>
+<div id="files"></div>
+</body>
 </html>
