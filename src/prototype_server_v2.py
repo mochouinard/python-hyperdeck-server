@@ -18,10 +18,27 @@ import os
 import json
 import time
 
+class WSClient:
+    def __init__(self, ws):
+        self.ws = ws
+
 class WS:
+    _clients = set()
     def __init__(self, hdi):
         self.hdi = hdi
+        self.hdi.registerEvent('newmedia', self.notifySlotChange)
+
+    async def send_to_all(self, msg) -> None:
+        if self._clients:
+            await asyncio.wait([client.ws.send(msg) for client in self._clients])
+
+    async def notifySlotChange(self, args):
+        await self.send_to_all(json.dumps({'type': 'event', 'name': 'newmedia'}));
+
     async def handler(self, websocket, path):
+        client = WSClient(websocket)
+        self._clients.add(client)
+
         while True:
             response = {'error': 'unknown command'}
             try:
@@ -30,19 +47,24 @@ class WS:
                 j = json.loads(data)
                 if j['cmd'] == 'load_list':
                     response = {'type': 'media_list', 'list': self.hdi.list_media()}
+                
+                elif j['cmd'] == 'disk_list':
+                    response = {'type': 'disk_list', 'list': self.hdi.get_disk_list()}
                 elif j['cmd'] == 'delete_media':
+                    found = False
                     for f in self.hdi.list_media():
                         if f['filename'] == j['filename']:
                             os.remove(f['location'] + '/' + f['filename'])
                             response = {'type': 'media_removed', 'filename': j['filename']}
                             await self.hdi.refreshMedia()
-
-                    else:
+                            found = True
+                    if not found:
                         response = {'error': 'Invalid filename'}
                 print (response)
                 await websocket.send(json.dumps(response))
             except websockets.exceptions.ConnectionClosed:
                 print(f'{websocket.remote_address} lost connection')
+                self._clients.remove(client)
                 return
 
 # HTTP:
@@ -67,27 +89,44 @@ class HTTP:
         await writer.drain()
 
     async def store_fileupload_handler(self, request):
-
-        reader = await request.multipart()
-
+        #data = await request.post()
+        #print(data)
+        #reader = await request.multipart()
+        #data = await request.post()
+        #print(data) 
         # /!\ Don't forget to validate your inputs /!\
 
         # reader.next() will `yield` the fields of your form
-        while True:
-            part = await reader.next()
-            if part is None:
-                break
+        #print(reader.headers)
+        destination = 'videos'
+        async for part in (await request.multipart()):
+        #while True:
+            #part = await reader.next()
+            #if part is None:
+            #    break
+            print(part.name)
             print(part.headers)
-            filename = part.filename
-            # You cannot rely on Content-Length if transfer is chunked.
-            size = 0
-            with open(os.path.join('videos/', filename), 'wb') as f:
-                while True:
-                    chunk = await part.read_chunk()  # 8192 bytes by default.
-                    if not chunk:
-                        break
-                    size += len(chunk)
-                    f.write(chunk)
+            print(part.form)
+
+            if part.name == 'destination':
+                destination = (await part.read()).decode()
+            if part.name == 'file1':
+            #if 1 == 1:
+                #MultiDictProxy('file1': FileField(name='file1', filename='test.pdf', file=<_io.BufferedRandom name=18>, content_type='application/pdf', headers=<CIMultiDictProxy('Content-Disposition': 'form-data; name="file1"; filename="test.pdf"', 'Content-Type': 'application/pdf')>))>
+                #part = data['file1']
+                filename = part.filename
+                # You cannot rely on Content-Length if transfer is chunked.
+                size = 0
+                if destination == '/':
+                    destination = 'videos'
+                with open(os.path.join(destination + '/', filename), 'wb') as f:
+                    while True:
+                        chunk = await part.read_chunk()  # 8192 bytes by default.
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        f.write(chunk)
+
         await self.hdi.refreshMedia()
         return web.Response(text='{} sized of {} successfully stored'
                              ''.format(filename, size))

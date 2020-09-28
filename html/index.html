@@ -20,24 +20,49 @@ function del_media(file) {
 	ws.send(JSON.stringify({'cmd': 'delete_media', 'filename': file}))
 
 }
+function bytesToSize(bytes) {
+   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+   if (bytes == 0) return '0 Byte';
+   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+   return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+}
 $(function() {
 		ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
 		messages = document.createElement('ul');
 		ws.onopen = function(event) {
 			ws.send(JSON.stringify({'cmd': 'load_list'}));
+			ws.send(JSON.stringify({'cmd': 'disk_list'}));
+
 		}
 		ws.onmessage = function (event) {
 			j = JSON.parse(event.data);
 			if (j['type'] == 'media_removed') {
 				ws.send(JSON.stringify({'cmd': 'load_list'}));
-			}
-			if (j['type'] == 'media_list') {
+			} else if (j['type'] == 'disk_list') {
+				list = '<ul>';
+				options = '';
+				$.each(j['list'], function(key, val) {
+					list += '<li>' + val['location'] + ' T: ' + bytesToSize(val['usage']['total']) + ' - U: ' + bytesToSize(val['usage']['used']) + ' - F: ' + bytesToSize(val['usage']['free']) + '</li>';
+					options += '<option>' + val['location'] + '</option>';
+                                });
+                                list += '</ul>';
+                                $("#drives").html(list);
+				$("#uploaddestination").html(options);
+			} else if (j['type'] == 'media_list') {
 				list = '<ul>';
 				$.each(j['list'], function(key, val) {
-					list += '<li>' + val + '</a> - <a target="_blank" href="videos/' + val + '">download</a> - <a href="javascript:del_media(\'' + val + '\');">delete</a></li>';
+					ext = "";
+					if ('device' in val) 
+						ext = 'EXT:';
+					list += '<li>' + ext + val['filename'] + '</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
 				});
 				list += '</ul>';
 				$("#files").html(list);
+			} else if (j['type'] == 'event' && j['name'] == 'newmedia') {
+				ws.send(JSON.stringify({'cmd': 'load_list'}));
+                        	ws.send(JSON.stringify({'cmd': 'disk_list'}));
+			} else {
+				console.log("unknown event", event.data);
 			}
 			/*
 			console.log(event.data);
@@ -54,7 +79,7 @@ $(function() {
 
 function postFile() {
     var formdata = new FormData();
-
+    formdata.append('destination', $('#uploaddestination').val());
     formdata.append('file1', $('#file1')[0].files[0]);
 
     var request = new XMLHttpRequest();
@@ -80,12 +105,17 @@ function postFile() {
 }
 </script>
 <form id="form1">
+    <select id="uploaddestination">
+            <option>Internal</option>
+    </select>
+
     <input id="file1" type="file" />
     <div class="progress-wrapper">
         <div id="progress-bar-file1" class="progress"></div>
     </div>
     <button type="button" onclick="postFile()">Upload File</button>
 </form>
+<div id="drives"></div>
 <div id="files"></div>
 </body>
 </html>

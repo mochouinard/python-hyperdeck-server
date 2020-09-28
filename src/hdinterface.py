@@ -15,6 +15,7 @@ class HyperDeckInterface:
     _files = None
     _active_clip = None
     _event = asyncio_event()
+    _external_devices = []
 
     def ActiveClip(self):
         if self._active_clip:
@@ -41,12 +42,20 @@ class HyperDeckInterface:
 
     def get_media(self, clip_id):
         return self._files[clip_id-1]['location'] + '/' + self._files[clip_id-1]['filename']
-
+    def get_disk_list(self):
+        return self._external_devices;
     def list_media(self):
         #if self._files == None:
         self._files = []
+        self._external_devices = []
+
         for f in os.listdir('videos'):
             self._files.append({'filename': f, 'location': 'videos'})
+        for p in psutil.disk_partitions():
+            if p.mountpoint == '/':
+                disk = psutil.disk_usage(p.mountpoint)
+                self._external_devices.append({'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
+
 
         context = pyudev.Context()
 
@@ -57,12 +66,15 @@ class HyperDeckInterface:
             print("Mounted removable partitions:")
             for p in psutil.disk_partitions():
                 if p.device in partitions:
+                    disk = psutil.disk_usage(p.mountpoint)
+                    self._external_devices.append({'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
+                if p.device in partitions:
                     print("  {}: {}".format(p.device, p.mountpoint))
                     for f in os.listdir(p.mountpoint):
                         self._files.append({'filename': f, 'location': p.mountpoint, 'device': p.device})
 
 
-
+        print (self._external_devices)
         return self._files
     
     def load_clip(self, clip_id):
