@@ -16,6 +16,7 @@ from hdinterface import HyperDeckInterface
 import re
 import os
 import json
+import time
 
 class WS:
     def __init__(self, hdi):
@@ -30,10 +31,11 @@ class WS:
                 if j['cmd'] == 'load_list':
                     response = {'type': 'media_list', 'list': self.hdi.list_media()}
                 elif j['cmd'] == 'delete_media':
-                    if j['filename'] in self.hdi.list_media():
-                        os.remove("videos/" + j['filename'])
-                        response = {'type': 'media_removed', 'filename': j['filename']}
-                        await self.hdi.refreshMedia()
+                    for f in self.hdi.list_media():
+                        if f['filename'] == j['filename']:
+                            os.remove(f['location'] + '/' + f['filename'])
+                            response = {'type': 'media_removed', 'filename': j['filename']}
+                            await self.hdi.refreshMedia()
 
                     else:
                         response = {'error': 'Invalid filename'}
@@ -251,7 +253,7 @@ class HDServer:
                     (h,m,s,fr) = self.hdi.hd.time_to_timecode(duration, fps_out)
                     tc = f'{h:02}:{m:02}:{s:02}:{fr:02}'
                     #f = 'video' + str(at) + '.mp4'
-                    response.append(str(at) + ":  " + f + " 00:00:00:00 " + tc)
+                    response.append(str(at) + ":  " + f['filename'] + " 00:00:00:00 " + tc)
                     at += 1
             elif cmd == 'remote':
                 response = [
@@ -273,10 +275,52 @@ class HDServer:
         writer.close()
         self._clients.remove(client)
 
+import pyudev
+from asyncio_event import asyncio_event
+import threading
+
+class USBMonitor:
+    _event = asyncio_event()
+    trigger = False
+    my_task = asyncio.Event()
+
+    def __init__(self, aa, hdi):
+        self.hdi = hdi
+        t = threading.Thread(target=self.monitor_thread)
+        t.start()
+        self.my_task = aa
+    async def monitor_wait(self):
+        while 1:
+            await self.my_task.wait()
+            print("TRIGGER!!!!")
+            asyncio.create_task(self.hdi.refreshMedia());
+            self.my_task.clear()
+
+    def monitor_thread(self):
+        print("Starting Montoring USB")
+        context = pyudev.Context()
+        monitor = pyudev.Monitor.from_netlink(context)
+        monitor.filter_by(subsystem='usb')
+
+        for device in iter(monitor.poll, None):
+            print(device.action)
+            if device.action == 'add' or device.action == 'remove':
+                print('{} {}'.format(device.action, device))
+                time.sleep(1)
+                self.my_task.set()
+                #self._event.emit(device.action, device)
+                #future = asyncio.run_coroutine_threadsafe(self.hdi.refreshMedia, self.loop)
+                #asyncio.create_task(self.hdi.refreshMedia());
+                # do something
+
 import logging
 async def serve():                                                                                           
     # Telnet
     hdi = HyperDeckInterface()
+    usbmon = USBMonitor(asyncio.Event(), hdi)
+    asyncio.create_task(usbmon.monitor_wait())
+    #usbmon.registerEvent('add', xxx)
+    #usbmon.registerEvent('remove', xxx)
 
     hds = HDServer(hdi)
     ts = await asyncio.start_server( hds.new_conn, '', 9993)

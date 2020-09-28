@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import vlc
 import socket
-import threading
 import socketserver
 import time
 import os

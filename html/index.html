@@ -34,7 +34,7 @@ $(function() {
 			if (j['type'] == 'media_list') {
 				list = '<ul>';
 				$.each(j['list'], function(key, val) {
-					list += '<li>' + val + ' - <a href="javascript:del_media(\'' + val + '\');">delete</a></li>';
+					list += '<li>' + val + '</a> - <a target="_blank" href="videos/' + val + '">download</a> - <a href="javascript:del_media(\'' + val + '\');">delete</a></li>';
 				});
 				list += '</ul>';
 				$("#files").html(list);
