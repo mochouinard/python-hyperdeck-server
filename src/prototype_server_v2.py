@@ -16,6 +16,7 @@ from hdinterface import HyperDeckInterface
 import re
 import os
 import json
+
 class WS:
     def __init__(self, hdi):
         self.hdi = hdi
@@ -32,6 +33,8 @@ class WS:
                     if j['filename'] in self.hdi.list_media():
                         os.remove("videos/" + j['filename'])
                         response = {'type': 'media_removed', 'filename': j['filename']}
+                        await self.hdi.refreshMedia()
+
                     else:
                         response = {'error': 'Invalid filename'}
                 print (response)
@@ -41,45 +44,50 @@ class WS:
                 return
 
 # HTTP:
-async def index_handle(request):
-    return web.FileResponse('html/index.html')
-    #name = request.match_info.get('name', "Anonymous")
-    #text = "Hello, " + name
-    return web.Response(text=text)
+class HTTP:
+    def __init__(self, hdi):
+        self.hdi = hdi
 
-async def send(writer, arr):
-    out = ""
-    for item in arr:
-        out += item + "\r\n"
+    async def index_handle(self, request):
+        return web.FileResponse('html/index.html')
+        #name = request.match_info.get('name', "Anonymous")
+        #text = "Hello, " + name
+        return web.Response(text=text)
 
-    out += "\r\n"
-    response = bytes(out, 'ascii')
-    writer.write(response)
-    await writer.drain()
-async def store_fileupload_handler(request):
+    async def send(self, writer, arr):
+        out = ""
+        for item in arr:
+            out += item + "\r\n"
 
-    reader = await request.multipart()
+        out += "\r\n"
+        response = bytes(out, 'ascii')
+        writer.write(response)
+        await writer.drain()
 
-    # /!\ Don't forget to validate your inputs /!\
+    async def store_fileupload_handler(self, request):
 
-    # reader.next() will `yield` the fields of your form
-    while True:
-        part = await reader.next()
-        if part is None:
-            break
-        print(part.headers)
-        filename = part.filename
-        # You cannot rely on Content-Length if transfer is chunked.
-        size = 0
-        with open(os.path.join('videos/', filename), 'wb') as f:
-            while True:
-                chunk = await part.read_chunk()  # 8192 bytes by default.
-                if not chunk:
-                    break
-                size += len(chunk)
-                f.write(chunk)
+        reader = await request.multipart()
 
-    return web.Response(text='{} sized of {} successfully stored'
+        # /!\ Don't forget to validate your inputs /!\
+
+        # reader.next() will `yield` the fields of your form
+        while True:
+            part = await reader.next()
+            if part is None:
+                break
+            print(part.headers)
+            filename = part.filename
+            # You cannot rely on Content-Length if transfer is chunked.
+            size = 0
+            with open(os.path.join('videos/', filename), 'wb') as f:
+                while True:
+                    chunk = await part.read_chunk()  # 8192 bytes by default.
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    f.write(chunk)
+        await self.hdi.refreshMedia()
+        return web.Response(text='{} sized of {} successfully stored'
                              ''.format(filename, size))
 # HyperDeck Server
 class HDClient:
@@ -112,6 +120,18 @@ class HDServer:
     def __init__(self, hdi):
         self._clients = set()
         self.hdi = hdi
+        self.hdi.registerEvent('newmedia', self.notifySlotChange)
+
+    async def send_to_all(self, msg) -> None:
+        if self._clients:
+            await asyncio.wait([client.send(msg) for client in self._clients])
+
+    async def notifySlotChange(self, args):
+        response = [
+                "502 slot info:",
+                self.hdi.buildSlotInfo(2)
+                ]
+        await self.send_to_all(response)
 
     def parseArg(self, arg):
         return re.findall('([a-zA-Z][^:]+): ([^ ]+)', arg)
@@ -252,6 +272,7 @@ class HDServer:
         print("Close the connection")
         writer.close()
         self._clients.remove(client)
+
 import logging
 async def serve():                                                                                           
     # Telnet
@@ -266,10 +287,11 @@ async def serve():
     
     logging.basicConfig(level=logging.DEBUG)
     #http
+    http = HTTP(hdi)
     app = aiohttp.web.Application()
     # index, loaded for all application uls.
-    app.router.add_get('/', index_handle)
-    app.router.add_post('/upload', store_fileupload_handler)
+    app.router.add_get('/', http.index_handle)
+    app.router.add_post('/upload', http.store_fileupload_handler)
     app.router.add_static('/videos/', path='videos/', name='static')
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()

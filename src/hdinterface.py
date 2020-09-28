@@ -5,16 +5,24 @@ import shlex
 import subprocess
 import json
 
+from asyncio_event import asyncio_event
+
 class HyperDeckInterface:
     hd =  HyperDeckPlayer()
     _files = None
     _active_clip = None
+    _event = asyncio_event()
 
     def ActiveClip(self):
         if self._active_clip:
             return str(self._active_clip)
         else:
             return 'none'
+    async def refreshMedia(self):
+        await self._event.emit("newmedia", None)
+
+    def registerEvent(self, name, func):
+        self._event.register(name, func)
 
     def buildSlotInfo(self, slot_id):
         if slot_id:
