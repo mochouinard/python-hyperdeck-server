@@ -86,17 +86,42 @@ function postFile() {
     request.addEventListener("loadend", function(e) {
 	ws.send(JSON.stringify({'cmd': 'load_list'}));
     });
+    var first = null;
+    var last_update = null;
+    var last_size = null;
+    var avg_speed = [];
+
+    const arrAvg = arr => arr.reduce((a,b) => a + b, 0) / arr.length;
     request.upload.addEventListener('progress', function (e) {
         var file1Size = $('#file1')[0].files[0].size;
-
+	if (first == null) {
+		first = {'total': file1Size, 'time': window.performance.now(), 'timetime': Date.now()};
+	}
         if (e.loaded <= file1Size) {
             var percent = Math.round(e.loaded / file1Size * 100);
+	    if (last_update != null) {
+		    //console.log(window.performance.now() - last_update);
+		    s = ((e.loaded - last_size) / ((window.performance.now() - last_update)/1000));
+		    avg_speed.push(s);
+	    }
+	    if (avg_speed.length > 10) {
+		avg_speed.shift();
+	    }
             $('#progress-bar-file1').width(percent + '%').html(percent + '%');
+            $('#speed-file1').html(bytesToSize(arrAvg(avg_speed)) + '/sec');
+
+            last_update = window.performance.now();
+            last_size = e.loaded;
+
         } 
 
         if(e.loaded == e.total){
             $('#progress-bar-file1').width(100 + '%').html(100 + '%');
+	    first['end'] = Date.now();
+		console.log(first);
         }
+
+
     });   
 
     request.open('post', '/upload');
@@ -112,6 +137,7 @@ function postFile() {
     <input id="file1" type="file" />
     <div class="progress-wrapper">
         <div id="progress-bar-file1" class="progress"></div>
+	<div id="speed-file1"></div>
     </div>
     <button type="button" onclick="postFile()">Upload File</button>
 </form>
