@@ -77,6 +77,20 @@ $(function() {
 
 });
 
+function timeLeft(t) {
+  var days = Math.floor(t / (1000 * 60 * 60 * 24));
+  var hours = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  var minutes = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+  var seconds = Math.floor((t % (1000 * 60)) / 1000);
+	var ret = '';
+	if (days != 0)
+		ret += days + "d ";
+	if (hours != 0)
+		ret += hours + "h ";
+	ret += minutes + "m ";
+	ret += seconds + 's ';
+	return ret;
+}
 function postFile() {
     var formdata = new FormData();
     formdata.append('destination', $('#uploaddestination').val());
@@ -101,14 +115,15 @@ function postFile() {
             var percent = Math.round(e.loaded / file1Size * 100);
 	    if (last_update != null) {
 		    //console.log(window.performance.now() - last_update);
-		    s = ((e.loaded - last_size) / ((window.performance.now() - last_update)/1000));
+		    s = ((e.loaded - last_size) / ((window.performance.now() - last_update)/1000.0));
 		    avg_speed.push(s);
 	    }
 	    if (avg_speed.length > 10) {
 		avg_speed.shift();
 	    }
             $('#progress-bar-file1').width(percent + '%').html(percent + '%');
-            $('#speed-file1').html(bytesToSize(arrAvg(avg_speed)) + '/sec');
+	    tl = ((file1Size - e.loaded) / (arrAvg(avg_speed))) * 1000.0;
+            $('#speed-file1').html(bytesToSize(e.loaded) + '/' + bytesToSize(file1Size) + ' ' + bytesToSize(arrAvg(avg_speed)) + '/sec'  + ' time left: ' + timeLeft(tl));
 
             last_update = window.performance.now();
             last_size = e.loaded;
