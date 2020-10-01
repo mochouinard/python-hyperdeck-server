@@ -30,3 +30,18 @@ Install on Linux : # apt install python3 pip3
 Install on Windows : 
 Install on OSX : https://evansdianga.com/install-pip-osx/
 
+
+
+2020-10-01 : Raspberry Pi Install from Raspberry Pi OS Lite (32-bit) [Not the Desktop version]
+sudo apt update
+sudo apt install -y git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil vlc
+git clone https://github.com/mochouinard/python-hyperdeck-server.git
+
+# To start the emulator
+cd python-hyperdeck-server
+./src/prototype_server_v2.py 
+
+# HyperDeck server port : 9993
+# Emulator Web GUI : 8082
+
+More detailed instruction and maybe a package image will be comming in the next few weeks.  It will provide an auto start, Info to configure Wifi and Static IP and a blackscreen when nothing is playing.
