@@ -37,11 +37,13 @@ sudo apt update
 sudo apt install -y git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil vlc
 git clone https://github.com/mochouinard/python-hyperdeck-server.git
 
-# To start the emulator
-cd python-hyperdeck-server
-./src/prototype_server_v2.py 
+sudo cp python-hyperdeck-server/systemd/hyperdeckemulator.service /lib/systemd/system/hyperdeckemulator.service
+
+sudo systemctl daemon-reload
+sudo systemctl enable "hyperdeckemulator"
+sudo systemctl start "hyperdeckemulator" 
 
 # HyperDeck server port : 9993
 # Emulator Web GUI : 8082
 
-More detailed instruction and maybe a package image will be comming in the next few weeks.  It will provide an auto start, Info to configure Wifi and Static IP and a blackscreen when nothing is playing.
+More detailed instruction and maybe a package image will be comming in the next few weeks.  It will provide Info to configure Wifi and Static IP and a blackscreen when nothing is playing.

@@ -1,0 +1,13 @@
+[Unit]
+Description=HyperDeck Emulator Service
+After=multi-user.target
+
+[Service]
+WorkingDirectory=/home/pi/python-hyperdeck-server
+User=pi
+Type=idle
+ExecStart=/home/pi/python-hyperdeck-server/src/prototype_server_v2.py &> /dev/null
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
