@@ -16,6 +16,43 @@
 <body>
 <script>
 var ws = null;
+
+
+
+function timeConverter(UNIX_timestamp){
+  var a = new Date(UNIX_timestamp * 1000);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var year = a.getFullYear();
+  var month = months[a.getMonth()];
+  var date = a.getDate();
+  var hour = a.getHours();
+  var min = a.getMinutes();
+  var sec = a.getSeconds();
+  var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
+  return time;
+}
+
+// List of HTML entities for escaping.
+var htmlEscapes = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+  '/': '&#x2F;'
+};
+
+// Regex containing the keys listed immediately above.
+var htmlEscaper = /[&<>"'\/]/g;
+
+// Escape a string for HTML interpolation.
+escapeHTML = function(string) {
+  return ('' + string).replace(htmlEscaper, function(match) {
+    return htmlEscapes[match];
+  });
+};
+
+
 function del_media(file) {
 	ws.send(JSON.stringify({'cmd': 'delete_media', 'filename': file}))
 
@@ -61,6 +98,17 @@ $(function() {
 			} else if (j['type'] == 'event' && j['name'] == 'newmedia') {
 				ws.send(JSON.stringify({'cmd': 'load_list'}));
                         	ws.send(JSON.stringify({'cmd': 'disk_list'}));
+			} else if (j['type'] == 'upgrade_info') {
+				git = j['git'];
+				out = "<ul>";
+				$.each(j['git']['new_commits'], function(i, val) {
+					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
+				});
+				out += '</ul>';
+				$('#new_log').html(out);
+				console.log(j);
+			} else if (j['type'] == 'upgrade_completed') {
+				ws.send(JSON.stringify({cmd: 'upgrade_check'}));
 			} else {
 				console.log("unknown event", event.data);
 			}
@@ -158,5 +206,11 @@ function postFile() {
 </form>
 <div id="drives"></div>
 <div id="files"></div>
+<button onclick="ws.send(JSON.stringify({cmd: 'upgrade_check'}));">Check for upgrade</button>
+<div id="upgrade">
+	<div id="new_log"></div>
+<button onclick="ws.send(JSON.stringify({cmd: 'upgrade_run'}));">Run Upgrade</button>
+
+</div>
 </body>
 </html>

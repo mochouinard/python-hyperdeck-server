@@ -17,6 +17,7 @@ import re
 import os
 import json
 import time
+import git
 
 class WSClient:
     def __init__(self, ws):
@@ -60,6 +61,24 @@ class WS:
                             found = True
                     if not found:
                         response = {'error': 'Invalid filename'}
+                elif j['cmd'] == 'upgrade_check':
+                    response = {'type': 'upgrade_info'}
+                    repo = git.Repo('.')
+                    for remote in repo.remotes:
+                        remote.fetch()
+                    response['git'] = {'is_dirty': repo.is_dirty(), 'untracked_files': repo.untracked_files, 'new_commits': []} # Files not in git
+                    for log in repo.iter_commits('origin/master'):
+                        if repo.head.commit == log:
+                            response['git']['current_commit'] = {'authored_date': log.authored_date, 'author_name': log.author.name, 'author_email': log.author.email, 'message': log.message}
+                            break
+                        else:
+                            response['git']['new_commits'].append({'authored_date': log.authored_date, 'author_name': log.author.name, 'author_email': log.author.email, 'message': log.message})
+
+                elif j['cmd'] == 'upgrade_run':
+                    repo = git.Repo('.')
+                    o = repo.remotes.origin
+                    o.pull()
+                    response = {'type': 'upgrade_completed'}
                 print (response)
                 await websocket.send(json.dumps(response))
             except websockets.exceptions.ConnectionClosed:
