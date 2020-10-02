@@ -107,11 +107,16 @@ $(function() {
 				if (j['git']['untracked_files'].length > 0) {
 					out += 'WARNING: Untracked files exist in software... Upgrade can cause issues</br>';
 				}
-				out += "<ul>";
-				$.each(j['git']['new_commits'], function(i, val) {
-					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
-				});
-				out += '</ul>';
+				if (j['git']['new_commits'].length == 0) {
+					out += 'Latest version is currently installed</br>';
+				} else {
+
+					out += "<ul>";
+					$.each(j['git']['new_commits'], function(i, val) {
+						out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
+					});
+					out += '</ul>';
+				}
 				if (j['git']['origin_commit'] != j['git']['head_commit']) {
 					out += 'New Version Available... Upgrade ? </br>';
 				}
