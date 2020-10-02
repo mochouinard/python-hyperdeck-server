@@ -28,6 +28,9 @@ class WS:
     def __init__(self, hdi):
         self.hdi = hdi
         self.hdi.registerEvent('newmedia', self.notifySlotChange)
+        repo = git.Repo('.')
+
+        self.git_runtime_head = repo.head.commit
 
     async def send_to_all(self, msg) -> None:
         if self._clients:
@@ -66,7 +69,7 @@ class WS:
                     repo = git.Repo('.')
                     for remote in repo.remotes:
                         remote.fetch()
-                    response['git'] = {'is_dirty': repo.is_dirty(), 'untracked_files': repo.untracked_files, 'new_commits': []} # Files not in git
+                    response['git'] = {'runtime_head_commit': str(self.git_runtime_head), 'head_commit': str(repo.head.commit), 'origin_commit': str(repo.remotes.origin.refs.master.commit) ,'is_dirty': repo.is_dirty(), 'untracked_files': repo.untracked_files, 'new_commits': []} # Files not in git
                     for log in repo.iter_commits('origin/master'):
                         if repo.head.commit == log:
                             response['git']['current_commit'] = {'authored_date': log.authored_date, 'author_name': log.author.name, 'author_email': log.author.email, 'message': log.message}
@@ -79,6 +82,9 @@ class WS:
                     o = repo.remotes.origin
                     o.pull()
                     response = {'type': 'upgrade_completed'}
+                elif j['cmd'] == 'kill':
+                    await websocket.send(json.dumps({'type': 'event', 'self_kill':True}))
+                    os._exit(1)
                 print (response)
                 await websocket.send(json.dumps(response))
             except websockets.exceptions.ConnectionClosed:

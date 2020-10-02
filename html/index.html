@@ -105,7 +105,14 @@ $(function() {
 					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
 				});
 				out += '</ul>';
+				if (j['git']['origin_commit'] != j['git']['head_commit']) {
+					out += 'New Version Available... Upgrade ? </br>';
+				}
+				if (j['git']['runtime_head_commit'] != j['git']['head_commit']) {
+					out += 'Running a different local version... Restart ?</br>';	
+				}
 				$('#new_log').html(out);
+
 				console.log(j);
 			} else if (j['type'] == 'upgrade_completed') {
 				ws.send(JSON.stringify({cmd: 'upgrade_check'}));
@@ -210,6 +217,7 @@ function postFile() {
 <div id="upgrade">
 	<div id="new_log"></div>
 <button onclick="ws.send(JSON.stringify({cmd: 'upgrade_run'}));">Run Upgrade</button>
+<button onclick="ws.send(JSON.stringify({cmd: 'kill'}));">Kill Restart</button>
 
 </div>
 </body>
