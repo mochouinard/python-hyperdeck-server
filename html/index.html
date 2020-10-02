@@ -100,7 +100,14 @@ $(function() {
                         	ws.send(JSON.stringify({'cmd': 'disk_list'}));
 			} else if (j['type'] == 'upgrade_info') {
 				git = j['git'];
-				out = "<ul>";
+				out = "";
+				if (j['git']['is_dirty']) {
+					out += 'WARNING: Local change to software exist... Upgrade can cause issues</br>';
+				}
+				if (j['git']['untracked_files'].length > 0) {
+					out += 'WARNING: Untracked files exist in software... Upgrade can cause issues</br>';
+				}
+				out += "<ul>";
 				$.each(j['git']['new_commits'], function(i, val) {
 					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
 				});
