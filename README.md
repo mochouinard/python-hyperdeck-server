@@ -34,7 +34,7 @@ Install on OSX : https://evansdianga.com/install-pip-osx/
 
 2020-10-01 : Raspberry Pi Install from Raspberry Pi OS Lite (32-bit) [Not the Desktop version]
 sudo apt update
-sudo apt install -y git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil vlc
+sudo apt install -y git vlc python3-git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil
 git clone https://github.com/mochouinard/python-hyperdeck-server.git
 
 sudo cp python-hyperdeck-server/systemd/hyperdeckemulator.service /lib/systemd/system/hyperdeckemulator.service
