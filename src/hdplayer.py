@@ -15,6 +15,8 @@ import re
 class HyperDeckPlayer():
     _playing = False 
     _debug = False
+    media = None
+
     def __init__(self):
         self._instance = vlc.Instance(['--video-on-top'])#, '--start-paused'])
         self._medialist = self._instance.media_list_new()
@@ -146,9 +148,12 @@ class HyperDeckPlayer():
         print("XX", self._player.get_state())
         
     def play(self):
-        self._playing = True
-        self._player.play()
-
+        if self.media:
+            self._playing = True
+            self._player.play()
+            return True
+        else:
+            return False
     def stop(self):
         self._playing = False
         self._player.stop()

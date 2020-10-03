@@ -48,14 +48,15 @@ class HyperDeckInterface:
         #if self._files == None:
         self._files = []
         self._external_devices = []
-
+        at = 1
         for f in os.listdir('videos'):
-            self._files.append({'filename': f, 'location': 'videos'})
+            self._files.append({'clip_id': at, 'filename': f, 'location': 'videos'})
+            at += 1
         for p in psutil.disk_partitions():
             if p.mountpoint == '/':
                 disk = psutil.disk_usage(p.mountpoint)
-                self._external_devices.append({'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
-
+                self._external_devices.append({'clip_id': at, 'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
+                at += 1
 
         context = pyudev.Context()
 

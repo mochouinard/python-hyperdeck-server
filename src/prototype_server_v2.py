@@ -51,7 +51,10 @@ class WS:
                 j = json.loads(data)
                 if j['cmd'] == 'load_list':
                     response = {'type': 'media_list', 'list': self.hdi.list_media()}
-                
+                elif j['cmd'] == 'play_clip':
+                    self.hdi.load_clip(j['clip_id'])
+                    ret = self.hdi.hd.play()
+                    response = {'todo':'todo'}
                 elif j['cmd'] == 'disk_list':
                     response = {'type': 'disk_list', 'list': self.hdi.get_disk_list()}
                 elif j['cmd'] == 'delete_media':
@@ -400,7 +403,8 @@ async def serve():
     # index, loaded for all application uls.
     app.router.add_get('/', http.index_handle)
     app.router.add_post('/upload', http.store_fileupload_handler)
-    app.router.add_static('/videos/', path='videos/', name='static')
+    app.add_routes([web.static('/static', 'html/static/')])
+    app.add_routes([web.static('/videos/', 'videos/')])
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, '', '8082')
@@ -409,8 +413,8 @@ async def serve():
     #ws
     ws = WS(hdi)
     wsserver = await websockets.serve(ws.handler, '', 8765)
-    hide_cursor()
-    print("\033[H\033[J")
+    #hide_cursor()
+    #print("\033[H\033[J")
     await wsserver.wait_closed()
 import sys
 import os
