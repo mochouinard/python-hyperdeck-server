@@ -136,11 +136,36 @@ function time_to_timecode(timex, fps) {
 function leftPad(value, length) { 
     return ('0'.repeat(length) + value).slice(-length); 
 }
+var seekRangelocked = false;
+function seekRangeMouseDown() {
+	seekRangelocked = true;
+}
+function seekRangeMouseUp() {
+	ws.send(JSON.stringify({'cmd':'set_time', 'position':parseInt($("#slider").val())}))
+	seekRangelocked = false;
+}
+
+var volRangelocked = false;
+function volRangeMouseDown() {
+        volRangelocked = true;
+}
+function volRangeMouseUp() {
+        ws.send(JSON.stringify({'cmd':'audio_set_volume', 'volume':parseInt($("#sliderVolume").val())}))
+        volRangelocked = false;
+}
+
 function update_tc() {
 	if (last_player_update != null) {
 		timeX = last_player_update['time'];
+		$("#slider").attr('max', last_player_update['duration']);
 		if (last_player_update['state'] == "State.Playing") {
 			timeX += (window.performance.now()-last_player_update_ts);
+		}
+		if (seekRangelocked == false) {
+			$("#slider").val(timeX);
+		}
+		if (volRangelocked == false) {
+			$("#sliderVolume").val(last_player_update['volume']);
 		}
 		out = time_to_timecode(timeX, last_player_update['fps']);
 		$("#tc").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
@@ -323,6 +348,9 @@ function postFile() {
 	  <div>
 		  TC: <span id="tc">00:00:00:00</span> - <span id="duration">00:00:00:00</span> State: <span id="state">N/A</span></br>
 		  <div>Controls: <a href="javascript:play()">play</a> - <a href="javascript:pause()">pause</a></div>
+		<input type="range" class="form-control-range" id="slider" onmousedown="seekRangeMouseDown()" onmouseup="seekRangeMouseUp()" onchange="seekRangeChange()">
+		Volume: <input type="range" class="form-control-range" max="100" id="sliderVolume" onmousedown="volRangeMouseDown()" onmouseup="volRangeMouseUp()" >
+
 	  </div>
 	<h3>Storages</h3>
 	<div id="drives"></div>

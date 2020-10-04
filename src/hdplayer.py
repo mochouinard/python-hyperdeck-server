@@ -81,6 +81,10 @@ class HyperDeckPlayer():
         if self._debug:
             print("ePaused")
         pass#self.is_playing = False
+    def eTimeChanged(self, event):
+        self._event.emitX("statechanged", None)
+        if self._debug:
+            print("eTimeChanged")
     def ePausable(self, event):
         if self._playing == False:
             self._player.pause()
@@ -107,7 +111,10 @@ class HyperDeckPlayer():
             print ("eVout")
         if self._playing == False and self._player.has_vout():
             self._player.pause()
-
+    def audio_get_volume(self):
+        return self._player.audio_get_volume()
+    def audio_set_volume(self, vol):
+        return self._player.audio_set_volume(vol)
     def is_playing(self):
         return self._player.is_playing()
     def get_fps(self):
@@ -120,6 +127,9 @@ class HyperDeckPlayer():
         return None
     def set_rate(self, rate):
         self._player.set_rate(rate)
+    def set_time(self, time):
+        self._player.set_time(time)
+
     def load(self, path):
         self.media = self._instance.media_new(path)
         events = self.media.event_manager()
@@ -127,6 +137,7 @@ class HyperDeckPlayer():
         events.event_attach(vlc.EventType.MediaStateChanged, self.eMediaState)
 
         self._player.set_media(self.media)
+        self.media.parse()
         #mfps = int(1000 / (self._player.get_fps() or 30))
 
         #self._player.set_time(1)
@@ -143,7 +154,6 @@ class HyperDeckPlayer():
         events = self._player.event_manager()
         events.event_attach(vlc.EventType.MediaPlayerEndReached, self.SongFinished)
         events.event_attach(vlc.EventType.MediaPlayerPlaying, self.ePlaying)
-        events.event_attach(vlc.EventType.MediaPlayerPositionChanged, self.poschanged)
         events.event_attach(vlc.EventType.MediaPlayerStopped, self.eStopped)
         events.event_attach(vlc.EventType.MediaPlayerPaused, self.ePaused)
         events.event_attach(vlc.EventType.MediaPlayerPositionChanged, self.poschanged)
@@ -152,7 +162,7 @@ class HyperDeckPlayer():
         events.event_attach(vlc.EventType.MediaPlayerVout, self.eVout)
         events.event_attach(vlc.EventType.MediaPlayerOpening, self.eOpening)
         events.event_attach(vlc.EventType.MediaPlayerBuffering, self.eBuffering)
-
+        events.event_attach(vlc.EventType.MediaPlayerTimeChanged, self.eTimeChanged)
         self._player.play()
 
         self._player.play()

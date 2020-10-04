@@ -42,7 +42,7 @@ class WS:
         await self.send_to_all(json.dumps({'type': 'event', 'name': 'newmedia'}));
 
     async def notifyStateChanged(self, args):
-        response = {'type': 'event', 'name': 'player_status', 'clip_id': self.hdi.ActiveClip(), 'fps':self.hdi.hd.get_fps(), 'rate': self.hdi.hd.get_rate(), 'time': self.hdi.hd.get_time(), 'duration': self.hdi.hd.get_duration(), 'state': str(self.hdi.hd.get_state())}
+        response = {'type': 'event', 'name': 'player_status', 'clip_id': self.hdi.ActiveClip(), 'fps':self.hdi.hd.get_fps(), 'rate': self.hdi.hd.get_rate(), 'time': self.hdi.hd.get_time(), 'duration': self.hdi.hd.get_duration(), 'state': str(self.hdi.hd.get_state()), 'volume': str(self.hdi.hd.audio_get_volume())}
 
         await self.send_to_all(json.dumps(response));
 
@@ -65,7 +65,12 @@ class WS:
                     self.hdi.hd.play()
                 elif j['cmd'] == 'pause':
                     self.hdi.hd.pause()
-
+                elif j['cmd'] == 'set_time':
+                    self.hdi.hd.set_time(j['position'])
+                    response = {'todo':'todo'}
+                elif j['cmd'] == 'audio_set_volume':
+                    self.hdi.hd.audio_set_volume(int(j['volume']))
+                    response = {'todo':'todo'}
                 elif j['cmd'] == 'play_clip':
                     if 'clip_id' in j:
                         self.hdi.load_clip(j['clip_id'])

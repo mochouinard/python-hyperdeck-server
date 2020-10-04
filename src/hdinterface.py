@@ -57,7 +57,7 @@ class HyperDeckInterface:
             (x, y, duration, fps) = self.findVideoMetadata('videos' + '/' + f)
             print('ttttttttttttttttttttttttttttttttt', duration)
             duration_str = '00:00:00'
-            if duration <= 8000:
+            if duration == None or duration <= 8000:
                 duration_str = None
             thumb = self.thumbGen('videos' + '/' + f, duration_str)
 
@@ -84,7 +84,12 @@ class HyperDeckInterface:
                     print("  {}: {}".format(p.device, p.mountpoint))
                     for f in os.listdir(p.mountpoint):
                         details = self.loadVideoMetadata(p.mountpoint + '/' + f)
-                        thumb = self.thumbGen(p.mountpoint + '/' + f)
+                        (x, y, duration, fps) = self.findVideoMetadata(p.mountpoint + '/' + f)
+                        print('ttttttttttttttttttttttttttttttttt', duration)
+                        duration_str = '00:00:00'
+                        if duration == None or duration <= 8000:
+                            duration_str = None
+                        thumb = self.thumbGen(p.mountpoint + '/' + f, duration_str)
 
                         self._files.append({'clip_id': at, 'filename': f, 'location': p.mountpoint, 'device': p.device, 'details': details, 'thumb': thumb})
                         at += 1
@@ -194,7 +199,9 @@ class HyperDeckInterface:
     def findVideoMetadata(self, pathToInputVideo):
         ffprobeOutput = self.loadVideoMetadata(pathToInputVideo)
         # for example, find height and width
-        print(ffprobeOutput)
+        print('ttttt', ffprobeOutput)
+        if ffprobeOutput == None:
+            return 0, 0, 0, 0
         height = self.ffprobeFind(ffprobeOutput, 'height')
         width = self.ffprobeFind(ffprobeOutput, 'width')
         duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
