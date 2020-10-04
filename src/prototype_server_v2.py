@@ -28,6 +28,8 @@ class WS:
     def __init__(self, hdi):
         self.hdi = hdi
         self.hdi.registerEvent('newmedia', self.notifySlotChange)
+        self.hdi.hd.registerEvent('statechanged', self.notifyStateChanged)
+
         repo = git.Repo('.')
 
         self.git_runtime_head = repo.head.commit
@@ -39,9 +41,17 @@ class WS:
     async def notifySlotChange(self, args):
         await self.send_to_all(json.dumps({'type': 'event', 'name': 'newmedia'}));
 
+    async def notifyStateChanged(self, args):
+        response = {'type': 'event', 'name': 'player_status', 'clip_id': self.hdi.ActiveClip(), 'fps':self.hdi.hd.get_fps(), 'rate': self.hdi.hd.get_rate(), 'time': self.hdi.hd.get_time(), 'duration': self.hdi.hd.get_duration(), 'state': str(self.hdi.hd.get_state())}
+
+        await self.send_to_all(json.dumps(response));
+
     async def handler(self, websocket, path):
         client = WSClient(websocket)
         self._clients.add(client)
+        
+        # Send initial State... It send it to everyone connected but it not a big issue
+        await self.notifyStateChanged(None)
 
         while True:
             response = {'error': 'unknown command'}
@@ -51,10 +61,17 @@ class WS:
                 j = json.loads(data)
                 if j['cmd'] == 'load_list':
                     response = {'type': 'media_list', 'list': self.hdi.list_media()}
+                elif j['cmd'] == 'play':
+                    self.hdi.hd.play()
+                elif j['cmd'] == 'pause':
+                    self.hdi.hd.pause()
+
                 elif j['cmd'] == 'play_clip':
                     self.hdi.load_clip(j['clip_id'])
                     ret = self.hdi.hd.play()
                     response = {'todo':'todo'}
+                elif j['cmd'] == 'player_status':
+                    response = {'type': 'player_status', 'clip_id': self.hdi.ActiveClip(), 'type': 'player_status', 'fps':self.hdi.hd.get_fps(), 'rate': self.hdi.hd.get_rate(), 'time': self.hdi.hd.get_time(), 'duration': self.hdi.hd.get_duration(), 'state': str(self.hdi.hd.get_state())}
                 elif j['cmd'] == 'disk_list':
                     response = {'type': 'disk_list', 'list': self.hdi.get_disk_list()}
                 elif j['cmd'] == 'delete_media':
@@ -223,7 +240,6 @@ class HDServer:
         res = self.parseArgGet(args, field)
         if not res:
             res = self.parseLineGet(lines, field)
-        print("XXXXXX", field, res)
         return res
 
     async def new_conn(self, reader, writer):
@@ -413,44 +429,10 @@ async def serve():
     #ws
     ws = WS(hdi)
     wsserver = await websockets.serve(ws.handler, '', 8765)
-    #hide_cursor()
-    #print("\033[H\033[J")
     await wsserver.wait_closed()
-import sys
-import os
+#import sys
+#import os
 
-if os.name == 'nt':
-    import msvcrt
-    import ctypes
-
-    class _CursorInfo(ctypes.Structure):
-        _fields_ = [("size", ctypes.c_int),
-                    ("visible", ctypes.c_byte)]
-
-def hide_cursor():
-    if os.name == 'nt':
-        ci = _CursorInfo()
-        handle = ctypes.windll.kernel32.GetStdHandle(-11)
-        ctypes.windll.kernel32.GetConsoleCursorInfo(handle, ctypes.byref(ci))
-        ci.visible = False
-        ctypes.windll.kernel32.SetConsoleCursorInfo(handle, ctypes.byref(ci))
-    elif os.name == 'posix':
-        sys.stdout.write("\033[?25l")
-        sys.stdout.flush()
-
-def show_cursor():
-    if os.name == 'nt':
-        ci = _CursorInfo()
-        handle = ctypes.windll.kernel32.GetStdHandle(-11)
-        ctypes.windll.kernel32.GetConsoleCursorInfo(handle, ctypes.byref(ci))
-        ci.visible = True
-        ctypes.windll.kernel32.SetConsoleCursorInfo(handle, ctypes.byref(ci))
-    elif os.name == 'posix':
-        sys.stdout.write("\033[?25h")
-        sys.stdout.flush()
-
-
-
-asyncio.run(serve())
-#asyncio.get_event_loop().run_until_complete(start_server)
+#asyncio.run(serve())
+asyncio.get_event_loop().run_until_complete(serve())
 asyncio.get_event_loop().run_forever()

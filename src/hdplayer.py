@@ -12,10 +12,13 @@ import json
 
 import re
 
+from asyncio_event import asyncio_event
+
 class HyperDeckPlayer():
     _playing = False 
     _debug = False
     media = None
+    _event = asyncio_event()
 
     def __init__(self):
         self._instance = vlc.Instance(['--video-on-top'])#, '--start-paused'])
@@ -25,6 +28,8 @@ class HyperDeckPlayer():
         self._player = self._instance.media_player_new()
         self._listplayer.set_media_player(self._player)
         self._player.set_fullscreen(True)
+    def registerEvent(self, name, func):
+        self._event.register(name, func)
     def time_to_timecode(self, time, fps):
         h = 0
         m = 0
@@ -59,15 +64,20 @@ class HyperDeckPlayer():
 
         pass#print(time)
     def ePlaying(self, event):
+        self._event.emitX("statechanged", None)
         if self._debug:
             print("ePlaying")
         if self._playing == False and self._player.has_vout():
             self._player.pause()
         pass#self.is_playing = True
     def eStopped(self, event):
+        self._event.emitX("statechanged", None)
+
         print("eStopped")
         pass#self.is_playing = False
     def ePaused(self, event):
+        self._event.emitX("statechanged", None)
+
         if self._debug:
             print("ePaused")
         pass#self.is_playing = False
@@ -79,12 +89,18 @@ class HyperDeckPlayer():
     def eUncorked(self, event):
         print("eUncorked")
     def eOpening(self, event):
+        self._event.emitX("statechanged", None)
+
         if self._debug:
             print("eOpening")
     def eBuffering(self, event):
         if self._debug:
             print("eBuffering") #, event.getBuffering())
+    def get_state(self):
+        return self._player.get_state()
     def eMediaState(self, event):
+        self._event.emitX("statechanged", None)
+
         print ("eMedia", self.media.get_state())
     def eVout(self, event):
         if self._debug:
@@ -98,6 +114,10 @@ class HyperDeckPlayer():
         return self._player.get_fps()
     def get_rate(self):
         return self._player.get_rate()
+    def get_duration(self):
+        if self.media:
+            return self.media.get_duration()
+        return None
     def set_rate(self, rate):
         self._player.set_rate(rate)
     def load(self, path):

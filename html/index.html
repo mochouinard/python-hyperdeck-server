@@ -89,7 +89,69 @@ function bytesToSize(bytes) {
    var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
 }
+function play() {
+	ws.send(JSON.stringify({'cmd':'play'}));
+}
+function pause() {
+	ws.send(JSON.stringify({'cmd':'pause'}));
+}
+var last_player_update = null;
+var last_player_update_ts = null;
+
+Math.trunc = function(n) {
+    return (n < 0) ? Math.ceil(n) : Math.floor(n);
+};
+// return fraction part
+Math.frac = function(n) {
+    return n - Math.trunc(n);
+};
+Math.modf = function(n) {
+    return [Math.trunc(n), Math.frac(n)];
+};
+
+function time_to_timecode(timex, fps) {
+        h = 0;
+        m = 0;
+        s = 0;
+        f = 0;
+
+        t = timex;
+        s = t/1000.0;
+	if (s >= 61) {
+            m = Math.floor(s / 60);
+            s -= m * 60;
+	}
+	if (m > 60) {
+            h = Math.floor(m / 60);
+            m -= h * 60;
+	}
+	x = Math.modf(s)
+	milli = x[1];
+	s = x[0];
+
+        s = parseInt(s);
+        f = Math.floor(fps * milli);
+        return [h,m,s,f];
+}
+function leftPad(value, length) { 
+    return ('0'.repeat(length) + value).slice(-length); 
+}
+function update_tc() {
+	if (last_player_update != null) {
+		timeX = last_player_update['time'];
+		if (last_player_update['state'] == "State.Playing") {
+			timeX += (window.performance.now()-last_player_update_ts);
+		}
+		out = time_to_timecode(timeX, last_player_update['fps']);
+		$("#tc").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
+		out = time_to_timecode(last_player_update['duration'], last_player_update['fps']);
+                
+		$("#duration").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
+		$("#state").html(last_player_update['state'].replace("State.", ""));
+	}
+}
 $(function() {
+		setInterval(update_tc, 30);
 		ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
 		messages = document.createElement('ul');
 		ws.onopen = function(event) {
@@ -101,6 +163,9 @@ $(function() {
 			j = JSON.parse(event.data);
 			if (j['type'] == 'media_removed') {
 				ws.send(JSON.stringify({'cmd': 'load_list'}));
+			} else if (j['type'] == 'event' && j['name'] == 'player_status') {
+				last_player_update_ts = window.performance.now();
+				last_player_update = j;
 			} else if (j['type'] == 'disk_list') {
 				list = '<ul>';
 				options = '';
@@ -252,14 +317,15 @@ function postFile() {
 <!-- Begin page content -->
 <main role="main" class="flex-shrink-0">
   <div class="container">
-<h3>Storages</h3>
-<div id="drives"></div>
+	  <div>
+		  TC: <span id="tc">00:00:00:00</span> - <span id="duration">00:00:00:00</span> State: <span id="state">N/A</span></br>
+		  <div>Controls: <a href="javascript:play()">play</a> - <a href="javascript:pause()">pause</a></div>
+	  </div>
+	<h3>Storages</h3>
+	<div id="drives"></div>
 
-<h3>Files files</h3>
-<div id="files"></div>
-
-</div>
-
+	<h3>Files files</h3>
+	<div id="files"></div>
   </div>
 </main>
 
