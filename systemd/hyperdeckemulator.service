@@ -6,7 +6,7 @@ After=multi-user.target
 WorkingDirectory=/home/pi/python-hyperdeck-server
 User=pi
 Type=idle
-ExecStart=/home/pi/python-hyperdeck-server/src/prototype_server_v2.py &> /dev/null
+ExecStart=/home/pi/python-hyperdeck-server/src/hdserver.py &> /dev/null
 Restart=always
 
 [Install]
