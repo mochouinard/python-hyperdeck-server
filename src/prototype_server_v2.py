@@ -67,6 +67,7 @@ class WS:
                     self.hdi.hd.pause()
                 elif j['cmd'] == 'set_time':
                     self.hdi.hd.set_time(j['position'])
+                    await self.notifyStateChanged(None)
                     response = {'todo':'todo'}
                 elif j['cmd'] == 'audio_set_volume':
                     self.hdi.hd.audio_set_volume(int(j['volume']))

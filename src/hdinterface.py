@@ -137,7 +137,8 @@ class HyperDeckInterface:
     def ffprobeFind(self, data, field):
         for item in data['streams']:
             if field in item:
-                return item[field]
+                if item[field] != '0/0':
+                    return item[field]
 
     def findClipMetadata(self, clip_id):
             return self.findVideoMetadata(self.get_media(clip_id))

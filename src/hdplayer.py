@@ -26,6 +26,19 @@ class HyperDeckPlayer():
         self._listplayer = self._instance.media_list_player_new()
         #self._listplayer.set_media_player(player)
         self._player = self._instance.media_player_new()
+        events = self._player.event_manager()
+        events.event_attach(vlc.EventType.MediaPlayerEndReached, self.SongFinished)
+        events.event_attach(vlc.EventType.MediaPlayerPlaying, self.ePlaying)
+        events.event_attach(vlc.EventType.MediaPlayerStopped, self.eStopped)
+        events.event_attach(vlc.EventType.MediaPlayerPaused, self.ePaused)
+        events.event_attach(vlc.EventType.MediaPlayerPositionChanged, self.poschanged)
+        events.event_attach(vlc.EventType.MediaPlayerPausableChanged, self.ePausable)
+        events.event_attach(vlc.EventType.MediaPlayerUncorked, self.eUncorked)
+        events.event_attach(vlc.EventType.MediaPlayerVout, self.eVout)
+        events.event_attach(vlc.EventType.MediaPlayerOpening, self.eOpening)
+        events.event_attach(vlc.EventType.MediaPlayerBuffering, self.eBuffering)
+        events.event_attach(vlc.EventType.MediaPlayerTimeChanged, self.eTimeChanged)
+
         self._listplayer.set_media_player(self._player)
         self._player.set_fullscreen(True)
     def registerEvent(self, name, func):
@@ -82,7 +95,7 @@ class HyperDeckPlayer():
             print("ePaused")
         pass#self.is_playing = False
     def eTimeChanged(self, event):
-        self._event.emitX("statechanged", None)
+        #self._event.emitX("statechanged", None)
         if self._debug:
             print("eTimeChanged")
     def ePausable(self, event):
@@ -133,7 +146,6 @@ class HyperDeckPlayer():
     def load(self, path):
         self.media = self._instance.media_new(path)
         events = self.media.event_manager()
-
         events.event_attach(vlc.EventType.MediaStateChanged, self.eMediaState)
 
         self._player.set_media(self.media)
@@ -151,18 +163,6 @@ class HyperDeckPlayer():
         #self._player.pause()
         print(self._player.get_state())
         #time.sleep(1)
-        events = self._player.event_manager()
-        events.event_attach(vlc.EventType.MediaPlayerEndReached, self.SongFinished)
-        events.event_attach(vlc.EventType.MediaPlayerPlaying, self.ePlaying)
-        events.event_attach(vlc.EventType.MediaPlayerStopped, self.eStopped)
-        events.event_attach(vlc.EventType.MediaPlayerPaused, self.ePaused)
-        events.event_attach(vlc.EventType.MediaPlayerPositionChanged, self.poschanged)
-        events.event_attach(vlc.EventType.MediaPlayerPausableChanged, self.ePausable)
-        events.event_attach(vlc.EventType.MediaPlayerUncorked, self.eUncorked)
-        events.event_attach(vlc.EventType.MediaPlayerVout, self.eVout)
-        events.event_attach(vlc.EventType.MediaPlayerOpening, self.eOpening)
-        events.event_attach(vlc.EventType.MediaPlayerBuffering, self.eBuffering)
-        events.event_attach(vlc.EventType.MediaPlayerTimeChanged, self.eTimeChanged)
         self._player.play()
 
         self._player.play()
