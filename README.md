@@ -6,6 +6,8 @@ I do my dev on Ubuntu 20.04 and also test it on a Raspberry Pi 4 2GB (And a Rasp
 
 To install on a Raspberry Pi :
 Using the Raspberry Pi Install tool, select Raspberry Pi OS Lite (32-bit) [Not the Desktop version]
+
+Login to your raspberry pi with user pi and run the following command (Require internet access)
 ```console
 sudo apt update
 sudo apt install -y git vlc python3-git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil
@@ -17,6 +19,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable "hyperdeckemulator"
 sudo systemctl start "hyperdeckemulator" 
 ```
-Then connect to your raspberry pi via HTTP to port 8082
+Then connect to the web UI, go to http://[Raspberry Pi IP]:8082/
+
+To find your IP, you can type : hostname -I
+
+To configure the wifi interface, run raspi-config
 
 More detailed instruction and maybe a package image will be comming in the next few weeks.  It will provide Info to configure Wifi and Static IP and a blackscreen when nothing is playing.
