@@ -148,6 +148,8 @@ function update_tc() {
                 
 		$("#duration").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
 		$("#state").html(last_player_update['state'].replace("State.", ""));
+		$("#clips li").css("background-color","");
+		$("#clip_id_" + last_player_update['clip_id']).css("background-color","yellow");
 	}
 }
 $(function() {
@@ -177,12 +179,13 @@ $(function() {
                                 $("#drives").html(list);
 				$("#uploaddestination").html(options);
 			} else if (j['type'] == 'media_list') {
-				list = '<ul>';
+				list = '<ul id="clips">';
 				$.each(j['list'], function(key, val) {
 					ext = "";
+					//console.log(val);
 					if ('device' in val) 
 						ext = 'EXT:';
-					list += '<li>' + ext + val['filename'] + '</a> - <a href="javascript:play_clip(' +val['clip_id'] + ')">play</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
+					list += '<li id="clip_id_' + val['clip_id'] + '"><img src="thumbs/' + val['thumb'] + '.png">' + ext + val['filename'] + '</a> - <a href="javascript:play_clip(' +val['clip_id'] + ')">play</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
 				});
 				list += '</ul>';
 				$("#files").html(list);
@@ -216,7 +219,7 @@ $(function() {
 				}
 				$('#new_log').html(out);
 
-				console.log(j);
+				//console.log(j);
 			} else if (j['type'] == 'upgrade_completed') {
 				ws.send(JSON.stringify({cmd: 'upgrade_check'}));
 			} else {
@@ -324,7 +327,7 @@ function postFile() {
 	<h3>Storages</h3>
 	<div id="drives"></div>
 
-	<h3>Files files</h3>
+	<h3>Files</h3>
 	<div id="files"></div>
   </div>
 </main>

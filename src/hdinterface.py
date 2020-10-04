@@ -7,6 +7,7 @@ import json
 import pyudev
 import psutil
 
+import hashlib
 
 from asyncio_event import asyncio_event
 
@@ -16,6 +17,8 @@ class HyperDeckInterface:
     _active_clip = None
     _event = asyncio_event()
     _external_devices = []
+
+    _ffprobe_cache = {}
 
     def ActiveClip(self):
         if self._active_clip:
@@ -50,13 +53,16 @@ class HyperDeckInterface:
         self._external_devices = []
         at = 1
         for f in os.listdir('videos'):
-            self._files.append({'clip_id': at, 'filename': f, 'location': 'videos'})
+            details = self.loadVideoMetadata('videos' + '/' + f)
+            thumb = self.thumbGen('videos' + '/' + f)
+
+            self._files.append({'clip_id': at, 'filename': f, 'location': 'videos', 'details': details, 'thumb': thumb})
             at += 1
+
         for p in psutil.disk_partitions():
             if p.mountpoint == '/':
                 disk = psutil.disk_usage(p.mountpoint)
-                self._external_devices.append({'clip_id': at, 'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
-                at += 1
+                self._external_devices.append({'location': p.mountpoint, 'device': p.device, 'opts': p.opts, 'usage': {'total': disk.total, 'used': disk.used, 'free': disk.free, 'percent': disk.percent}})
 
         context = pyudev.Context()
 
@@ -72,8 +78,11 @@ class HyperDeckInterface:
                 if p.device in partitions:
                     print("  {}: {}".format(p.device, p.mountpoint))
                     for f in os.listdir(p.mountpoint):
-                        self._files.append({'filename': f, 'location': p.mountpoint, 'device': p.device})
+                        details = self.loadVideoMetadata(p.mountpoint + '/' + f)
+                        thumb = self.thumbGen(p.mountpoint + '/' + f)
 
+                        self._files.append({'clip_id': at, 'filename': f, 'location': p.mountpoint, 'device': p.device, 'details': details, 'thumb': thumb})
+                        at += 1
 
         print (self._external_devices)
         return self._files
@@ -83,7 +92,6 @@ class HyperDeckInterface:
         if vid.endswith(".url"):
             with open(vid, 'r') as reader:
                 vid = reader.readline().strip()
-        print ("TTTTTTTTTTTTTTTTTTTTTTTTT", vid)
         self.hd.load(vid)
         self._active_clip = clip_id
 
@@ -122,30 +130,56 @@ class HyperDeckInterface:
                 return item[field]
 
     def findClipMetadata(self, clip_id):
-            return self.findVideoMetada(self.get_media(clip_id))
+            return self.findVideoMetadata(self.get_media(clip_id))
 
-    def findVideoMetada(self, pathToInputVideo):
-        cmd = "ffprobe -v quiet -print_format json -show_streams"
-        args = shlex.split(cmd)
+    def thumbGen(self, pathToInputVideo):
+        m = hashlib.md5()
+        m.update(pathToInputVideo.encode('utf-8'))
+        fname = m.hexdigest()
+        if os.path.exists('thumbs/' + fname + '.png'):
+            return fname
+
+        args = shlex.split('ffmpeg -ss 00:00:08 -i')
         args.append(pathToInputVideo)
-        # run the ffprobe process, decode stdout into utf-8 & convert to JSON
+        args += shlex.split('-vframes 1 -filter:v scale="280:-1" -y')
+        args.append('thumbs/' + fname + '.png')
         try:
             ffprobeOutput = subprocess.check_output(args).decode('utf-8')
-            ffprobeOutput = json.loads(ffprobeOutput)
-
-            # prints all the metadata available:
-            #import pprint
-            #pp = pprint.PrettyPrinter(indent=2)
-            #pp.pprint(ffprobeOutput)
-
-            # for example, find height and width
-            print(ffprobeOutput)
-            height = self.ffprobeFind(ffprobeOutput, 'height')
-            width = self.ffprobeFind(ffprobeOutput, 'width')
-            duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
-            fps = self.ffprobeFind(ffprobeOutput, 'avg_frame_rate')
-            #print(width, height, duration, fps)
-            return width, height, duration, fps
         except subprocess.CalledProcessError as e:
-            print ("ffprobe error stdout output:\n", e.output)
+            print ("ffmpeg error stdout output:\n", e.output)
             return None
+        return fname
+
+    def loadVideoMetadata(self, pathToInputVideo):
+        ffprobeOutput = None
+
+        if pathToInputVideo in self._ffprobe_cache:
+            ffprobeOutput = self._ffprobe_cache[pathToInputVideo]['json']
+        else:
+            cmd = "ffprobe -v quiet -print_format json -show_streams"
+            args = shlex.split(cmd)
+            args.append(pathToInputVideo)
+            # run the ffprobe process, decode stdout into utf-8 & convert to JSON
+            try:
+                ffprobeOutput = subprocess.check_output(args).decode('utf-8')
+                ffprobeOutput = json.loads(ffprobeOutput)
+                self._ffprobe_cache[pathToInputVideo] = {'json':ffprobeOutput}
+            except subprocess.CalledProcessError as e:
+                print ("ffprobe error stdout output:\n", e.output)
+                return None
+
+        # prints all the metadata available:
+        #import pprint
+        #pp = pprint.PrettyPrinter(indent=2)
+        #pp.pprint(ffprobeOutput)
+        return ffprobeOutput
+    def findVideoMetadata(self, pathToInputVideo):
+        ffprobeOutput = loadVideoMetadata(pathToInputVideo)
+        # for example, find height and width
+        print(ffprobeOutput)
+        height = self.ffprobeFind(ffprobeOutput, 'height')
+        width = self.ffprobeFind(ffprobeOutput, 'width')
+        duration = self.ffprobeFind(ffprobeOutput, 'duration_ts')
+        fps = self.ffprobeFind(ffprobeOutput, 'avg_frame_rate')
+        #print(width, height, duration, fps)
+        return width, height, duration, fps

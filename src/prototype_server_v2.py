@@ -67,9 +67,12 @@ class WS:
                     self.hdi.hd.pause()
 
                 elif j['cmd'] == 'play_clip':
-                    self.hdi.load_clip(j['clip_id'])
-                    ret = self.hdi.hd.play()
-                    response = {'todo':'todo'}
+                    if 'clip_id' in j:
+                        self.hdi.load_clip(j['clip_id'])
+                        ret = self.hdi.hd.play()
+                        response = {'todo':'todo'}
+                    else:
+                        response = {'error': 'No Clip_id', 'j':j}
                 elif j['cmd'] == 'player_status':
                     response = {'type': 'player_status', 'clip_id': self.hdi.ActiveClip(), 'type': 'player_status', 'fps':self.hdi.hd.get_fps(), 'rate': self.hdi.hd.get_rate(), 'time': self.hdi.hd.get_time(), 'duration': self.hdi.hd.get_duration(), 'state': str(self.hdi.hd.get_state())}
                 elif j['cmd'] == 'disk_list':
@@ -420,6 +423,7 @@ async def serve():
     app.router.add_get('/', http.index_handle)
     app.router.add_post('/upload', http.store_fileupload_handler)
     app.add_routes([web.static('/static', 'html/static/')])
+    app.add_routes([web.static('/thumbs', 'thumbs/')])
     app.add_routes([web.static('/videos/', 'videos/')])
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
