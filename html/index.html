@@ -207,6 +207,7 @@ function ws_connect() {
 		} else if (j['type'] == 'event' && j['name'] == 'player_status') {
 			last_player_update_ts = window.performance.now();
 			last_player_update = j;
+			console.log(last_player_update);
 		} else if (j['type'] == 'disk_list') {
 			list = '<ul>';
 			options = '';

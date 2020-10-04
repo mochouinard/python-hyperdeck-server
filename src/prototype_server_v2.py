@@ -71,6 +71,7 @@ class WS:
                     response = {'todo':'todo'}
                 elif j['cmd'] == 'audio_set_volume':
                     self.hdi.hd.audio_set_volume(int(j['volume']))
+                    await self.notifyStateChanged(None)
                     response = {'todo':'todo'}
                 elif j['cmd'] == 'play_clip':
                     if 'clip_id' in j:

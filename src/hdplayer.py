@@ -38,7 +38,9 @@ class HyperDeckPlayer():
         events.event_attach(vlc.EventType.MediaPlayerOpening, self.eOpening)
         events.event_attach(vlc.EventType.MediaPlayerBuffering, self.eBuffering)
         events.event_attach(vlc.EventType.MediaPlayerTimeChanged, self.eTimeChanged)
-
+        events.event_attach(vlc.EventType.MediaPlayerMediaChanged, self.eMediaChanged)
+        events.event_attach(vlc.EventType.MediaPlayerAudioVolume, self.eAudioVolume)
+        events.event_attach(vlc.EventType.MediaPlayerLengthChanged, self.eLengthChanged)
         self._listplayer.set_media_player(self._player)
         self._player.set_fullscreen(True)
     def registerEvent(self, name, func):
@@ -124,6 +126,23 @@ class HyperDeckPlayer():
             print ("eVout")
         if self._playing == False and self._player.has_vout():
             self._player.pause()
+
+    def eLengthChanged(self, event):
+        self._event.emitX("statechanged", None)
+        if self._debug:
+            print("eLengthChanged")
+
+    def eMediaChanged(self, event):
+        self._event.emitX("statechanged", None)
+        if self._debug:
+            print("eMediaChanged")
+
+    def eAudioVolume(self, event):
+        self._event.emitX("statechanged", None)
+
+        if self._debug:
+            print("eAudioVolume")
+
     def audio_get_volume(self):
         return self._player.audio_get_volume()
     def audio_set_volume(self, vol):
