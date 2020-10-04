@@ -54,7 +54,12 @@ class HyperDeckInterface:
         at = 1
         for f in os.listdir('videos'):
             details = self.loadVideoMetadata('videos' + '/' + f)
-            thumb = self.thumbGen('videos' + '/' + f)
+            (x, y, duration, fps) = self.findVideoMetadata('videos' + '/' + f)
+            print('ttttttttttttttttttttttttttttttttt', duration)
+            duration_str = '00:00:00'
+            if duration <= 8000:
+                duration_str = None
+            thumb = self.thumbGen('videos' + '/' + f, duration_str)
 
             self._files.append({'clip_id': at, 'filename': f, 'location': 'videos', 'details': details, 'thumb': thumb})
             at += 1
@@ -132,17 +137,26 @@ class HyperDeckInterface:
     def findClipMetadata(self, clip_id):
             return self.findVideoMetadata(self.get_media(clip_id))
 
-    def thumbGen(self, pathToInputVideo):
+    def thumbGen(self, pathToInputVideo, pos):
+        
         m = hashlib.md5()
         m.update(pathToInputVideo.encode('utf-8'))
         fname = m.hexdigest()
         if os.path.exists('thumbs/' + fname + '.png'):
             return fname
-
-        args = shlex.split('ffmpeg -ss 00:00:08 -i')
-        args.append(pathToInputVideo)
+        url = pathToInputVideo
+        if url.endswith('.url'):
+            with open(url, 'r') as f:
+                url = f.readline().strip()
+        args = shlex.split('ffmpeg')
+        if pos:
+            args += shlex.split('-ss')
+            args.append(pos)
+        args += shlex.split('-i')
+        args.append(url)
         args += shlex.split('-vframes 1 -filter:v scale="280:-1" -y')
         args.append('thumbs/' + fname + '.png')
+        print(' '.join(args))
         try:
             ffprobeOutput = subprocess.check_output(args).decode('utf-8')
         except subprocess.CalledProcessError as e:
@@ -156,9 +170,13 @@ class HyperDeckInterface:
         if pathToInputVideo in self._ffprobe_cache:
             ffprobeOutput = self._ffprobe_cache[pathToInputVideo]['json']
         else:
+            url = pathToInputVideo
+            if url.endswith('.url'):
+                with open(url, 'r') as f:
+                    url = f.readline().strip()
             cmd = "ffprobe -v quiet -print_format json -show_streams"
             args = shlex.split(cmd)
-            args.append(pathToInputVideo)
+            args.append(url)
             # run the ffprobe process, decode stdout into utf-8 & convert to JSON
             try:
                 ffprobeOutput = subprocess.check_output(args).decode('utf-8')
@@ -174,7 +192,7 @@ class HyperDeckInterface:
         #pp.pprint(ffprobeOutput)
         return ffprobeOutput
     def findVideoMetadata(self, pathToInputVideo):
-        ffprobeOutput = loadVideoMetadata(pathToInputVideo)
+        ffprobeOutput = self.loadVideoMetadata(pathToInputVideo)
         # for example, find height and width
         print(ffprobeOutput)
         height = self.ffprobeFind(ffprobeOutput, 'height')
