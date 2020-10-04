@@ -141,7 +141,7 @@ function seekRangeMouseDown() {
 	seekRangelocked = true;
 }
 function seekRangeMouseUp() {
-	ws.send(JSON.stringify({'cmd':'set_time', 'position':parseInt($("#slider").val())}))
+	ws.send(JSON.stringify({'cmd':'set_time', 'position':parseInt($("#sliderSeek").val())}))
 	seekRangelocked = false;
 }
 
@@ -157,12 +157,12 @@ function volRangeMouseUp() {
 function update_tc() {
 	if (last_player_update != null) {
 		timeX = last_player_update['time'];
-		$("#slider").attr('max', last_player_update['duration']);
+		$("#sliderSeek").attr('max', last_player_update['duration']);
 		if (last_player_update['state'] == "State.Playing") {
 			timeX += (window.performance.now()-last_player_update_ts);
 		}
 		if (seekRangelocked == false) {
-			$("#slider").val(timeX);
+			$("#sliderSeek").val(timeX);
 		}
 		if (volRangelocked == false) {
 			$("#sliderVolume").val(last_player_update['volume']);
@@ -178,90 +178,104 @@ function update_tc() {
 	}
 }
 $(function() {
-		setInterval(update_tc, 30);
-		ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
-		messages = document.createElement('ul');
-		ws.onopen = function(event) {
+        setInterval(update_tc, 30);
+	ws_connect();
+});
+
+function ws_connect() {
+	ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
+	messages = document.createElement('ul');
+	ws.onopen = function(event) {
+		ws.send(JSON.stringify({'cmd': 'load_list'}));
+		ws.send(JSON.stringify({'cmd': 'disk_list'}));
+
+	}
+	ws.onerror = function(err) {
+		console.error('Socket encountered error: ', err.message, 'Closing socket');
+		ws.close();
+	};
+	ws.onclose = function(e) {
+		console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+		setTimeout(function() {
+			ws_connect();
+		}, 1000);
+	};
+	ws.onmessage = function (event) {
+		j = JSON.parse(event.data);
+		if (j['type'] == 'media_removed') {
 			ws.send(JSON.stringify({'cmd': 'load_list'}));
-			ws.send(JSON.stringify({'cmd': 'disk_list'}));
-
-		}
-		ws.onmessage = function (event) {
-			j = JSON.parse(event.data);
-			if (j['type'] == 'media_removed') {
-				ws.send(JSON.stringify({'cmd': 'load_list'}));
-			} else if (j['type'] == 'event' && j['name'] == 'player_status') {
-				last_player_update_ts = window.performance.now();
-				last_player_update = j;
-			} else if (j['type'] == 'disk_list') {
-				list = '<ul>';
-				options = '';
-				$.each(j['list'], function(key, val) {
-					list += '<li>' + val['location'] + ' Total: ' + bytesToSize(val['usage']['total']) + ' - Used: ' + bytesToSize(val['usage']['used']) + ' - Free: ' + bytesToSize(val['usage']['free']) + '</li>';
-					options += '<option>' + val['location'] + '</option>';
-                                });
-                                list += '</ul>';
-                                $("#drives").html(list);
-				$("#uploaddestination").html(options);
-			} else if (j['type'] == 'media_list') {
-				list = '<ul id="clips">';
-				$.each(j['list'], function(key, val) {
-					ext = "";
-					//console.log(val);
-					if ('device' in val) 
-						ext = 'EXT:';
-					list += '<li id="clip_id_' + val['clip_id'] + '"><img src="thumbs/' + val['thumb'] + '.png">' + ext + val['filename'] + '</a> - <a href="javascript:play_clip(' +val['clip_id'] + ')">play</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
-				});
-				list += '</ul>';
-				$("#files").html(list);
-			} else if (j['type'] == 'event' && j['name'] == 'newmedia') {
-				ws.send(JSON.stringify({'cmd': 'load_list'}));
-                        	ws.send(JSON.stringify({'cmd': 'disk_list'}));
-			} else if (j['type'] == 'upgrade_info') {
-				git = j['git'];
-				out = "";
-				if (j['git']['is_dirty']) {
-					out += 'WARNING: Local change to software exist... Upgrade can cause issues</br>';
-				}
-				if (j['git']['untracked_files'].length > 0) {
-					out += 'WARNING: Untracked files exist in software... Upgrade can cause issues</br>';
-				}
-				if (j['git']['new_commits'].length == 0) {
-					out += 'Latest version is currently installed</br>';
-				} else {
-
-					out += "<ul>";
-					$.each(j['git']['new_commits'], function(i, val) {
-						out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
-					});
-					out += '</ul>';
-				}
-				if (j['git']['origin_commit'] != j['git']['head_commit']) {
-					out += 'New Version Available... Upgrade ? </br>';
-				}
-				if (j['git']['runtime_head_commit'] != j['git']['head_commit']) {
-					out += 'Running a different local version... Restart ?</br>';	
-				}
-				$('#new_log').html(out);
-
-				//console.log(j);
-			} else if (j['type'] == 'upgrade_completed') {
-				ws.send(JSON.stringify({cmd: 'upgrade_check'}));
-			} else {
-				console.log("unknown event", event.data);
+		} else if (j['type'] == 'event' && j['name'] == 'player_status') {
+			last_player_update_ts = window.performance.now();
+			last_player_update = j;
+		} else if (j['type'] == 'disk_list') {
+			list = '<ul>';
+			options = '';
+			$.each(j['list'], function(key, val) {
+				list += '<li>' + val['location'] + ' Total: ' + bytesToSize(val['usage']['total']) + ' - Used: ' + bytesToSize(val['usage']['used']) + ' - Free: ' + bytesToSize(val['usage']['free']) + '</li>';
+				options += '<option>' + val['location'] + '</option>';
+                        });
+                        list += '</ul>';
+                        $("#drives").html(list);
+			$("#uploaddestination").html(options);
+		} else if (j['type'] == 'media_list') {
+			list = '<ul id="clips">';
+			$.each(j['list'], function(key, val) {
+				ext = "";
+				//console.log(val);
+				if ('device' in val) 
+					ext = 'EXT:';
+				list += '<li id="clip_id_' + val['clip_id'] + '"><img src="thumbs/' + val['thumb'] + '.png">' + ext + val['filename'] + '</a> - <a href="javascript:play_clip(' +val['clip_id'] + ')">play</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
+			});
+			list += '</ul>';
+			$("#files").html(list);
+		} else if (j['type'] == 'event' && j['name'] == 'newmedia') {
+			ws.send(JSON.stringify({'cmd': 'load_list'}));
+                        ws.send(JSON.stringify({'cmd': 'disk_list'}));
+		} else if (j['type'] == 'upgrade_info') {
+			git = j['git'];
+			out = "";
+			if (j['git']['is_dirty']) {
+				out += 'WARNING: Local change to software exist... Upgrade can cause issues</br>';
 			}
-			/*
-			console.log(event.data);
-			var messages = document.getElementsByTagName('ul')[0],
-				message = document.createElement('li'),
-				content = document.createTextNode(event.data);
+			if (j['git']['untracked_files'].length > 0) {
+				out += 'WARNING: Untracked files exist in software... Upgrade can cause issues</br>';
+			}
+			if (j['git']['new_commits'].length == 0) {
+				out += 'Latest version is currently installed</br>';
+			} else {
+
+				out += "<ul>";
+				$.each(j['git']['new_commits'], function(i, val) {
+					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
+				});
+				out += '</ul>';
+			}
+			if (j['git']['origin_commit'] != j['git']['head_commit']) {
+				out += 'New Version Available... Upgrade ? </br>';
+			}
+			if (j['git']['runtime_head_commit'] != j['git']['head_commit']) {
+				out += 'Running a different local version... Restart ?</br>';	
+			}
+			$('#new_log').html(out);
+
+			//console.log(j);
+		} else if (j['type'] == 'upgrade_completed') {
+			ws.send(JSON.stringify({cmd: 'upgrade_check'}));
+		} else {
+			console.log("unknown event", event.data);
+		}
+		/*
+		console.log(event.data);
+		var messages = document.getElementsByTagName('ul')[0],
+			message = document.createElement('li'),
+			content = document.createTextNode(event.data);
 		message.appendChild(content);
 		messages.appendChild(message);
 		*/
 	};
 //	document.body.appendChild(messages);
 
-});
+};
 
 function timeLeft(t) {
   var days = Math.floor(t / (1000 * 60 * 60 * 24));
@@ -348,7 +362,7 @@ function postFile() {
 	  <div>
 		  TC: <span id="tc">00:00:00:00</span> - <span id="duration">00:00:00:00</span> State: <span id="state">N/A</span></br>
 		  <div>Controls: <a href="javascript:play()">play</a> - <a href="javascript:pause()">pause</a></div>
-		<input type="range" class="form-control-range" id="slider" onmousedown="seekRangeMouseDown()" onmouseup="seekRangeMouseUp()" onchange="seekRangeChange()">
+		<input type="range" class="form-control-range" id="sliderSeek" onmousedown="seekRangeMouseDown()" onmouseup="seekRangeMouseUp()">
 		Volume: <input type="range" class="form-control-range" max="100" id="sliderVolume" onmousedown="volRangeMouseDown()" onmouseup="volRangeMouseUp()" >
 
 	  </div>

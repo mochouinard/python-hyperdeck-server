@@ -1,5 +1,5 @@
 import asyncio
-import functools
+#import functools
 
 class asyncio_event:
     _cb = {}
