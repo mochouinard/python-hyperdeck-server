@@ -47,12 +47,12 @@ sed -i 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"[^"]\+"/
 chromium-browser --disable-component-update --disable-infobars --kiosk 'http://127.0.0.1:8082/kiosk/'
 EOF
 
-systemctl set-default graphical.target
-ln -fs /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty1.service
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
+sudo systemctl set-default graphical.target
+sudo ln -fs /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty1.service
+cat << EOF | sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
 EOF
-sed /etc/lightdm/lightdm.conf -i -e "s/^\(#\|\)autologin-user=.*/autologin-user=$USER/"
+sudo sed /etc/lightdm/lightdm.conf -i -e "s/^\(#\|\)autologin-user=.*/autologin-user=$USER/"
 ```
