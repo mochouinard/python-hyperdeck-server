@@ -434,6 +434,8 @@ function ws_connect() {
 					name = j['value'];
 					$($('text[inkscape\\:label="' + j['field'] + '"]', SD)[0].lastChild, SD).text(name);
 
+				} else if (j['do'] == 'reload') {
+					window.location.reload(false);
 				}
 			}
 		} else {

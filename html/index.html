@@ -469,6 +469,7 @@ function postFile() {
 	      </div>
 	      <div>
 		      <button onclick="ws.send(JSON.stringify({'cmd': 'close_media'}));">Close Video Player</button>
+			<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'reload'}));">Reload Kiosk Page</button>
 
 
 		      </br>
