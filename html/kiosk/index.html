@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, initial-scale=1, shrink-to-fit=no">
+<title>Kios</title>
+<script src="/static/js/jquery-3.5.1.min.js"></script>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: grey;
+}
+</style>
+</head>
+<script>
+var ws = null;
+
+
+
+function timeConverter(UNIX_timestamp){
+  var a = new Date(UNIX_timestamp * 1000);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var year = a.getFullYear();
+  var month = months[a.getMonth()];
+  var date = a.getDate();
+  var hour = a.getHours();
+  var min = a.getMinutes();
+  var sec = a.getSeconds();
+  var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
+  return time;
+}
+
+// List of HTML entities for escaping.
+var htmlEscapes = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+  '/': '&#x2F;'
+};
+
+// Regex containing the keys listed immediately above.
+var htmlEscaper = /[&<>"'\/]/g;
+
+// Escape a string for HTML interpolation.
+escapeHTML = function(string) {
+  return ('' + string).replace(htmlEscaper, function(match) {
+    return htmlEscapes[match];
+  });
+};
+
+function play_clip(clip_id) {
+	ws.send(JSON.stringify({'cmd':'play_clip', 'clip_id':clip_id}));
+}
+function del_media(file) {
+	ws.send(JSON.stringify({'cmd': 'delete_media', 'filename': file}))
+
+}
+function bytesToSize(bytes) {
+   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+   if (bytes == 0) return '0 Byte';
+   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+   return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+}
+function play() {
+	ws.send(JSON.stringify({'cmd':'play'}));
+}
+function pause() {
+	ws.send(JSON.stringify({'cmd':'pause'}));
+}
+var last_player_update = null;
+var last_player_update_ts = null;
+
+Math.trunc = function(n) {
+    return (n < 0) ? Math.ceil(n) : Math.floor(n);
+};
+// return fraction part
+Math.frac = function(n) {
+    return n - Math.trunc(n);
+};
+Math.modf = function(n) {
+    return [Math.trunc(n), Math.frac(n)];
+};
+
+function time_to_timecode(timex, fps) {
+        h = 0;
+        m = 0;
+        s = 0;
+        f = 0;
+
+        t = timex;
+        s = t/1000.0;
+	if (s >= 61) {
+            m = Math.floor(s / 60);
+            s -= m * 60;
+	}
+	if (m > 60) {
+            h = Math.floor(m / 60);
+            m -= h * 60;
+	}
+	x = Math.modf(s)
+	milli = x[1];
+	s = x[0];
+
+        s = parseInt(s);
+        f = Math.floor(fps * milli);
+        return [h,m,s,f];
+}
+function leftPad(value, length) { 
+    return ('0'.repeat(length) + value).slice(-length); 
+}
+var seekRangelocked = false;
+function seekRangeMouseDown() {
+	seekRangelocked = true;
+}
+function seekRangeMouseUp() {
+	ws.send(JSON.stringify({'cmd':'set_time', 'position':parseInt($("#sliderSeek").val())}))
+	seekRangelocked = false;
+}
+
+var volRangelocked = false;
+function volRangeMouseDown() {
+        volRangelocked = true;
+}
+function volRangeMouseUp() {
+        ws.send(JSON.stringify({'cmd':'audio_set_volume', 'volume':parseInt($("#sliderVolume").val())}))
+        volRangelocked = false;
+}
+
+function update_tc() {
+	if (last_player_update != null) {
+		timeX = last_player_update['time'];
+		$("#sliderSeek").attr('max', last_player_update['duration']);
+		if (last_player_update['state'] == "State.Playing") {
+			timeX += (window.performance.now()-last_player_update_ts);
+		}
+		if (seekRangelocked == false) {
+			$("#sliderSeek").val(timeX);
+		}
+		if (volRangelocked == false) {
+			$("#sliderVolume").val(last_player_update['volume']);
+		}
+		out = time_to_timecode(timeX, last_player_update['fps']);
+		$("#tc").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
+		out = time_to_timecode(last_player_update['duration'], last_player_update['fps']);
+                
+		$("#duration").html(leftPad(out[0], 2) + ':' + leftPad(out[1], 2) + ':' + leftPad(out[2], 2) + ':' + leftPad(out[3], 2));
+		$("#state").html(last_player_update['state'].replace("State.", ""));
+		$("#clips li").css("background-color","");
+		$("#clip_id_" + last_player_update['clip_id']).css("background-color","yellow");
+	}
+}
+$(function() {
+        //setInterval(update_tc, 30);
+	//ws_connect();
+});
+
+function ws_connect() {
+	ws = new WebSocket("ws://" + location.host.split(':')[0] + ":8765/"), 
+	messages = document.createElement('ul');
+	ws.onopen = function(event) {
+		ws.send(JSON.stringify({'cmd': 'load_list'}));
+		ws.send(JSON.stringify({'cmd': 'disk_list'}));
+
+	}
+	ws.onerror = function(err) {
+		console.error('Socket encountered error: ', err.message, 'Closing socket');
+		ws.close();
+	};
+	ws.onclose = function(e) {
+		console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+		setTimeout(function() {
+			ws_connect();
+		}, 1000);
+	};
+	ws.onmessage = function (event) {
+		j = JSON.parse(event.data);
+		if (j['type'] == 'media_removed') {
+			ws.send(JSON.stringify({'cmd': 'load_list'}));
+		} else if (j['type'] == 'event' && j['name'] == 'player_status') {
+			last_player_update_ts = window.performance.now();
+			last_player_update = j;
+			console.log(last_player_update);
+		} else if (j['type'] == 'disk_list') {
+			list = '<ul>';
+			options = '';
+			$.each(j['list'], function(key, val) {
+				list += '<li>' + val['location'] + ' Total: ' + bytesToSize(val['usage']['total']) + ' - Used: ' + bytesToSize(val['usage']['used']) + ' - Free: ' + bytesToSize(val['usage']['free']) + '</li>';
+				options += '<option>' + val['location'] + '</option>';
+                        });
+                        list += '</ul>';
+                        $("#drives").html(list);
+			$("#uploaddestination").html(options);
+		} else if (j['type'] == 'media_list') {
+			list = '<ul id="clips">';
+			$.each(j['list'], function(key, val) {
+				ext = "";
+				//console.log(val);
+				if ('device' in val) 
+					ext = 'EXT:';
+				list += '<li id="clip_id_' + val['clip_id'] + '"><img src="/thumbs/' + val['thumb'] + '.png">' + ext + val['filename'] + '</a> - <a href="javascript:play_clip(' +val['clip_id'] + ')">play</a> - <a target="_blank" href="videos/' + val['filename'] + '">download</a> - <a href="javascript:del_media(\'' + val['filename'] + '\');">delete</a></li>';
+			});
+			list += '</ul>';
+			$("#files").html(list);
+		} else if (j['type'] == 'event' && j['name'] == 'newmedia') {
+			ws.send(JSON.stringify({'cmd': 'load_list'}));
+                        ws.send(JSON.stringify({'cmd': 'disk_list'}));
+		} else if (j['type'] == 'upgrade_info') {
+			git = j['git'];
+			out = "";
+			if (j['git']['is_dirty']) {
+				out += 'WARNING: Local change to software exist... Upgrade can cause issues</br>';
+			}
+			if (j['git']['untracked_files'].length > 0) {
+				out += 'WARNING: Untracked files exist in software... Upgrade can cause issues</br>';
+			}
+			if (j['git']['new_commits'].length == 0) {
+				out += 'Latest version is currently installed</br>';
+			} else {
+
+				out += "<ul>";
+				$.each(j['git']['new_commits'], function(i, val) {
+					out += '<li>' + timeConverter(val.authored_date) + ': ' + val.author_name + escapeHTML(' <' + val.author_email + '> ') + val.message + '</li>';
+				});
+				out += '</ul>';
+			}
+			if (j['git']['origin_commit'] != j['git']['head_commit']) {
+				out += 'New Version Available... Upgrade ? </br>';
+			}
+			if (j['git']['runtime_head_commit'] != j['git']['head_commit']) {
+				out += 'Running a different local version... Restart ?</br>';	
+			}
+			$('#new_log').html(out);
+
+			//console.log(j);
+		} else if (j['type'] == 'upgrade_completed') {
+			ws.send(JSON.stringify({cmd: 'upgrade_check'}));
+		} else {
+			console.log("unknown event", event.data);
+		}
+		/*
+		console.log(event.data);
+		var messages = document.getElementsByTagName('ul')[0],
+			message = document.createElement('li'),
+			content = document.createTextNode(event.data);
+		message.appendChild(content);
+		messages.appendChild(message);
+		*/
+	};
+//	document.body.appendChild(messages);
+
+};
+
+function timeLeft(t) {
+  var days = Math.floor(t / (1000 * 60 * 60 * 24));
+  var hours = Math.floor((t % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  var minutes = Math.floor((t % (1000 * 60 * 60)) / (1000 * 60));
+  var seconds = Math.floor((t % (1000 * 60)) / 1000);
+	var ret = '';
+	if (days != 0)
+		ret += days + "d ";
+	if (hours != 0)
+		ret += hours + "h ";
+	ret += minutes + "m ";
+	ret += seconds + 's ';
+	return ret;
+}
+function postFile() {
+    var formdata = new FormData();
+    formdata.append('destination', $('#uploaddestination').val());
+    formdata.append('file1', $('#file1')[0].files[0]);
+
+    var request = new XMLHttpRequest();
+    request.addEventListener("loadend", function(e) {
+	ws.send(JSON.stringify({'cmd': 'load_list'}));
+    });
+    var first = null;
+    var last_update = null;
+    var last_size = null;
+    var avg_speed = [];
+
+    const arrAvg = arr => arr.reduce((a,b) => a + b, 0) / arr.length;
+    request.upload.addEventListener('progress', function (e) {
+        var file1Size = $('#file1')[0].files[0].size;
+	if (first == null) {
+		first = {'total': file1Size, 'time': window.performance.now(), 'timetime': Date.now()};
+	}
+        if (e.loaded <= file1Size) {
+            var percent = Math.round(e.loaded / file1Size * 100);
+	    if (last_update != null) {
+		    //console.log(window.performance.now() - last_update);
+		    s = ((e.loaded - last_size) / ((window.performance.now() - last_update)/1000.0));
+		    avg_speed.push(s);
+	    }
+	    if (avg_speed.length > 10) {
+		avg_speed.shift();
+	    }
+            $('#progress-bar-file1').width(percent + '%').html(percent + '%');
+	    tl = ((file1Size - e.loaded) / (arrAvg(avg_speed))) * 1000.0;
+            $('#speed-file1').html(bytesToSize(e.loaded) + '/' + bytesToSize(file1Size) + ' ' + bytesToSize(arrAvg(avg_speed)) + '/sec'  + ' time left: ' + timeLeft(tl));
+
+            last_update = window.performance.now();
+            last_size = e.loaded;
+
+        } 
+
+        if(e.loaded == e.total){
+            $('#progress-bar-file1').width(100 + '%').html(100 + '%');
+	    first['end'] = Date.now();
+		console.log(first);
+        }
+
+
+    });   
+
+    request.open('post', '/upload');
+    request.timeout = 300000;
+    request.send(formdata);
+}
+$(function() {
+	var S=document.getElementById("svg-object");
+	var SD = S.getSVGDocument();
+	setInterval(function() {
+		S=document.getElementById("svg-object");
+	        SD = S.getSVGDocument();
+
+		names = ['Marc O. Chouinard', 'Jack the ripper', 'John Doe', 'Elvis Preslay', 'Jonney McDonald'];
+		name = names[Math.floor(Math.random() * names.length)];
+		$($('text[inkscape\\:label="myName"]', SD)[0].lastChild, SD).text(name);
+	},3000);
+
+
+	S.animate([
+	  // keyframes
+	  { transform: 'translateX(-1920px)' }, 
+	  { transform: 'translateX( 0px)' },
+	], { 
+	  // timing options
+	  duration: 1500,
+	  iterations: Infinity,
+		easing: "ease-in-out",
+	  endDelay: 1000,
+	  
+	});
+
+});
+</script>
+<body>
+
+
+    <object id="svg-object" data="/static/caption.svg" type="image/svg+xml"></object>
+
+
+	<ximg src="/static/caption.svgxx">
+
+</body>
+</html>

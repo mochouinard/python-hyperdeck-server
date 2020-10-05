@@ -132,6 +132,11 @@ class HTTP:
         #name = request.match_info.get('name', "Anonymous")
         #text = "Hello, " + name
         return web.Response(text=text)
+    async def index_kios_handle(self, request):
+        return web.FileResponse('html/kiosk/index.html')
+        #name = request.match_info.get('name', "Anonymous")
+        #text = "Hello, " + name
+        return web.Response(text=text)
 
     async def send(self, writer, arr):
         out = ""
@@ -428,6 +433,8 @@ async def serve():
     app = aiohttp.web.Application()
     # index, loaded for all application uls.
     app.router.add_get('/', http.index_handle)
+    app.router.add_get('/kiosk/', http.index_kios_handle)
+
     app.router.add_post('/upload', http.store_fileupload_handler)
     app.add_routes([web.static('/static', 'html/static/')])
     app.add_routes([web.static('/thumbs', 'thumbs/')])
