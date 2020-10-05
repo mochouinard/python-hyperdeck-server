@@ -472,8 +472,8 @@ function postFile() {
 
 
 		      </br>
-		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/caption.svg'}));">Load caption.svg</button>
-		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/intro.svg'}));">Load intro.svg</button>
+		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/kiosk/caption.svg'}));">Load caption.svg</button>
+		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/kiosk/intro.svg'}));">Load intro.svg</button>
 			</br>
 
 <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'in-left', 'anim-dur':'1s'}));">Animate IN from LEFT</button>
