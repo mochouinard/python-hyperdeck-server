@@ -468,6 +468,10 @@ function postFile() {
 		      This is testing a system to generate animation overlay.  These are executed to <a href="/kiosk/" target="_blank">this page</a>.  The idea is that your raspberry pi load this page on startup and display this page where we can do different functions (We could playback youtube video, show simple animation or whatever we wish...). We could make it that we know which HDMI output is selected, so we can change the name automaticly to that camera presenter...
 	      </div>
 	      <div>
+		      <button onclick="ws.send(JSON.stringify({'cmd': 'close_media'}));">Close Video Player</button>
+
+
+		      </br>
 		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/caption.svg'}));">Load caption.svg</button>
 		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/intro.svg'}));">Load intro.svg</button>
 			</br>

@@ -19,12 +19,16 @@ class HyperDeckPlayer():
     _debug = False
     media = None
     _event = asyncio_event()
-
+    _player = None
     def __init__(self):
         self._instance = vlc.Instance(['--video-on-top'])#, '--start-paused'])
-        self._medialist = self._instance.media_list_new()
-        self._listplayer = self._instance.media_list_player_new()
+        ##self._medialist = self._instance.media_list_new()
+        ##self._listplayer = self._instance.media_list_player_new()
         #self._listplayer.set_media_player(player)
+        self.loadplayer()
+    def loadplayer(self):
+        if self._player:
+            return self._player
         self._player = self._instance.media_player_new()
         events = self._player.event_manager()
         events.event_attach(vlc.EventType.MediaPlayerEndReached, self.SongFinished)
@@ -41,8 +45,15 @@ class HyperDeckPlayer():
         events.event_attach(vlc.EventType.MediaPlayerMediaChanged, self.eMediaChanged)
         events.event_attach(vlc.EventType.MediaPlayerAudioVolume, self.eAudioVolume)
         events.event_attach(vlc.EventType.MediaPlayerLengthChanged, self.eLengthChanged)
-        self._listplayer.set_media_player(self._player)
+        ##self._listplayer.set_media_player(self._player)
         self._player.set_fullscreen(True)
+        return self._player
+    def closeMedia(self):
+        if self._player:
+            self._player.release()
+            self._player = None
+            return True
+        return False
     def registerEvent(self, name, func):
         self._event.register(name, func)
     def time_to_timecode(self, time, fps):
@@ -63,9 +74,12 @@ class HyperDeckPlayer():
         f = math.floor(fps * milli)
         return (h,m,s,f)
     def get_time(self):
-        return self._player.get_time()
+        player = self.loadplayer()
+        return player.get_time()
     def get_length(self):
-        return self._player.get_length()
+        player = self.loadplayer()
+
+        return player.get_length()
     def SongFinished(self, event):
         global finish
         print ("Event reports - finished")
@@ -74,16 +88,20 @@ class HyperDeckPlayer():
         finish = 1
     def poschanged(self, event):
         #print("poschanged")
-        if self._playing == False and self._player.has_vout():
-            self._player.pause()
+        player = self.loadplayer()
+
+        if self._playing == False and player.has_vout():
+            player.pause()
 
         pass#print(time)
     def ePlaying(self, event):
+        player = self.loadplayer()
+
         self._event.emitX("statechanged", None)
         if self._debug:
             print("ePlaying")
-        if self._playing == False and self._player.has_vout():
-            self._player.pause()
+        if self._playing == False and player.has_vout():
+            player.pause()
         pass#self.is_playing = True
     def eStopped(self, event):
         self._event.emitX("statechanged", None)
@@ -101,8 +119,10 @@ class HyperDeckPlayer():
         if self._debug:
             print("eTimeChanged")
     def ePausable(self, event):
+        player = self.loadplayer()
+
         if self._playing == False:
-            self._player.pause()
+            player.pause()
         if self._debug:
             print("ePausable")
     def eUncorked(self, event):
@@ -116,16 +136,20 @@ class HyperDeckPlayer():
         if self._debug:
             print("eBuffering") #, event.getBuffering())
     def get_state(self):
-        return self._player.get_state()
+        player = self.loadplayer()
+
+        return player.get_state()
     def eMediaState(self, event):
         self._event.emitX("statechanged", None)
 
         print ("eMedia", self.media.get_state())
     def eVout(self, event):
+        player = self.loadplayer()
+
         if self._debug:
             print ("eVout")
-        if self._playing == False and self._player.has_vout():
-            self._player.pause()
+        if self._playing == False and player.has_vout():
+            player.pause()
 
     def eLengthChanged(self, event):
         self._event.emitX("statechanged", None)
@@ -144,31 +168,44 @@ class HyperDeckPlayer():
             print("eAudioVolume")
 
     def audio_get_volume(self):
-        return self._player.audio_get_volume()
+        player = self.loadplayer()
+
+        return player.audio_get_volume()
     def audio_set_volume(self, vol):
-        return self._player.audio_set_volume(vol)
+        player = self.loadplayer()
+
+        return player.audio_set_volume(vol)
     def is_playing(self):
-        return self._player.is_playing()
+        player = self.loadplayer()
+
+        return player.is_playing()
     def get_fps(self):
-        return self._player.get_fps()
+        player = self.loadplayer()
+
+        return player.get_fps()
     def get_rate(self):
-        return self._player.get_rate()
+        player = self.loadplayer()
+
+        return player.get_rate()
     def get_duration(self):
         if self.media:
             return self.media.get_duration()
         return None
     def set_rate(self, rate):
-        self._player.set_rate(rate)
+        player = self.loadplayer()
+        player.set_rate(rate)
     def set_time(self, time):
-        self._player.set_time(time)
+        player = self.loadplayer()
+        player.set_time(time)
 
     def load(self, path):
+        player = self.loadplayer()
         self.media = self._instance.media_new(path)
         self.media.add_option(':network-caching=90000')
         events = self.media.event_manager()
         events.event_attach(vlc.EventType.MediaStateChanged, self.eMediaState)
-
-        self._player.set_media(self.media)
+        
+        player.set_media(self.media)
         self.media.parse()
         #mfps = int(1000 / (self._player.get_fps() or 30))
 
@@ -181,11 +218,10 @@ class HyperDeckPlayer():
         #print(self._player.get_state())
         #self._player.set_time(0)
         #self._player.pause()
-        print(self._player.get_state())
         #time.sleep(1)
-        self._player.play()
+        player.play()
 
-        self._player.play()
+        player.play()
         print ("NEXT")
         #self._player.set_pause(1)
         #self._player.next_frame()
@@ -194,20 +230,24 @@ class HyperDeckPlayer():
         #self._player.pause()
         #while self._player.get_state() == 4 or self._player.get_state() == 0:
         #    print(self._player.get_state())
-        print(self._player.get_state())
-        print("XX", self._player.get_state())
+        print(player.get_state())
         
     def play(self):
+        player = self.loadplayer()
+
         if self.media:
             self._playing = True
-            self._player.play()
+            player.play()
             return True
         else:
             return False
     def stop(self):
+        player = self.loadplayer()
         self._playing = False
-        self._player.stop()
+        player.stop()
     def pause(self):
-        if self._player.is_playing():
+        player = self.loadplayer()
+
+        if player.is_playing():
             self._playing = False
-            self._player.pause()
+            player.pause()

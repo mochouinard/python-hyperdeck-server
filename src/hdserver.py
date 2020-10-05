@@ -67,6 +67,9 @@ class WS:
                     response['type'] = 'event'
                     response['name'] = 'kiosk_cmd'
                     await self.send_to_all(json.dumps(response));
+                elif j['cmd'] == 'close_media':
+                    self.hdi.hd.closeMedia()
+
                 elif j['cmd'] == 'play':
                     self.hdi.hd.play()
                 elif j['cmd'] == 'pause':
