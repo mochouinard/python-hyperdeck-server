@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="1920"
+   height="1080"
+   viewBox="0 0 507.99999 285.75001"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
+   sodipodi:docname="static.svg">
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4534">
+      <stop
+         style="stop-color:#808080;stop-opacity:1;"
+         offset="0"
+         id="stop4530" />
+      <stop
+         style="stop-color:#000080;stop-opacity:0"
+         offset="1"
+         id="stop4532" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4534"
+       id="linearGradient4536"
+       x1="216.95833"
+       y1="173.70415"
+       x2="246.66725"
+       y2="384.31247"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-63.500003)" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.5"
+     inkscape:cx="915.71429"
+     inkscape:cy="434.28571"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1848"
+     inkscape:window-height="1016"
+     inkscape:window-x="72"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-11.249983)">
+    <path
+       sodipodi:type="star"
+       style="fill:#6f9680;fill-opacity:1;stroke:#fffc00;stroke-width:1.66499996;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.32000002"
+       id="path4563"
+       sodipodi:sides="5"
+       sodipodi:cx="109.53751"
+       sodipodi:cy="100.14998"
+       sodipodi:r1="85.672714"
+       sodipodi:r2="42.836357"
+       sodipodi:arg1="0.47469688"
+       sodipodi:arg2="1.1030154"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 185.73751,139.30831 -56.8848,-0.92384 -33.009888,46.3366 L 79.143075,130.33493 24.873734,113.25946 71.437516,80.570814 70.907112,23.680991 116.38486,57.864433 170.32639,39.780067 151.8694,93.595239 Z"
+       inkscape:transform-center-x="4.231895"
+       inkscape:transform-center-y="4.051051" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot4565"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       transform="matrix(0.26458333,0,0,0.26458333,0,11.249983)"><flowRegion
+         id="flowRegion4567"><rect
+           id="rect4569"
+           width="1140"
+           height="210"
+           x="498"
+           y="190" /></flowRegion><flowPara
+         id="flowPara4571"></flowPara></flowRoot>    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:25.39999962px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="119.06249"
+       y="80.041656"
+       id="text4575"
+       inkscape:label="myName"><tspan
+         sodipodi:role="line"
+         id="tspan4573"
+         x="119.06249"
+         y="80.041656"
+         style="font-size:25.39999962px;stroke-width:0.26458332">The Amazing Web SHOW ! </tspan></text>
+  </g>
+</svg>

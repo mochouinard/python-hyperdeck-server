@@ -349,6 +349,7 @@ function postFile() {
   <div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom shadow-sm">
   <h5 class="my-0 mr-md-auto font-weight-normal">HyperDeck Emulator</h5>
   <nav class="my-2 my-md-0 mr-md-3">
+    <a class="p-2 text-dark" href="#" data-toggle="modal" data-target="#overlayModal">Overlay Control</a>
     <a class="p-2 text-dark" href="#" data-toggle="modal" data-target="#upgradeModal">Upgrade</a>
     <a class="p-2 text-dark" href="#">About</a>
   </nav>
@@ -441,8 +442,47 @@ function postFile() {
 <div id="new_log"></div>
 <button onclick="ws.send(JSON.stringify({cmd: 'upgrade_run'}));">Run Upgrade</button>
 <button onclick="ws.send(JSON.stringify({cmd: 'kill'}));">Kill Restart</button>
+	</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+      </div>
+    </div>
+  </div>
+</div>
 
-        </form>
+
+<div class="modal fade" id="overlayModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Overlay</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+	      <h3>Demo</h3>
+	      <div>
+		      This is testing a system to generate animation overlay.  These are executed to <a href="/kiosk/" target="_blank">this page</a>.  The idea is that your raspberry pi load this page on startup and display this page where we can do different functions (We could playback youtube video, show simple animation or whatever we wish...). We could make it that we know which HDMI output is selected, so we can change the name automaticly to that camera presenter...
+	      </div>
+	      <div>
+		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/caption.svg'}));">Load caption.svg</button>
+		      <button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/intro.svg'}));">Load intro.svg</button>
+			</br>
+
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'in-left', 'anim-dur':'1s'}));">Animate IN from LEFT</button>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'out-left', 'anim-dur':'1s'}));">Animate OUT from LEFT</button></br>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'in-right', 'anim-dur':'1s'}));">Animate IN from RIGHT</button>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'out-right', 'anim-dur':'1s'}));">Animate OUT from RIGHT</button></br>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'in-fade', 'anim-dur':'1s'}));">Animate IN to FADE</button>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'out-fade', 'anim-dur':'1s'}));">Animate OUT to FADE</button></br>
+
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'text', field:'myName', value:'Jonny Memonic'}));">Set Name Jonny Memonic</button>
+<button onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'text', field:'myName', value:'Alfred Einstein'}));">Set Name Alfred Einstein</button>
+		</div>
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>

@@ -61,6 +61,12 @@ class WS:
                 j = json.loads(data)
                 if j['cmd'] == 'load_list':
                     response = {'type': 'media_list', 'list': self.hdi.list_media()}
+                elif j['cmd'] == 'kiosk':
+                    response = j
+                    del response['cmd']
+                    response['type'] = 'event'
+                    response['name'] = 'kiosk_cmd'
+                    await self.send_to_all(json.dumps(response));
                 elif j['cmd'] == 'play':
                     self.hdi.hd.play()
                 elif j['cmd'] == 'pause':

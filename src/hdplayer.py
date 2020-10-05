@@ -164,6 +164,7 @@ class HyperDeckPlayer():
 
     def load(self, path):
         self.media = self._instance.media_new(path)
+        self.media.add_option(':network-caching=90000')
         events = self.media.event_manager()
         events.event_attach(vlc.EventType.MediaStateChanged, self.eMediaState)
 
