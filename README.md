@@ -55,4 +55,11 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
 EOF
 sudo sed /etc/lightdm/lightdm.conf -i -e "s/^\(#\|\)autologin-user=.*/autologin-user=$USER/"
+
+# The following is to try to delay chromium update as long as possible so we don't get an UI update notification on screen
+cat << EOF | sudo tee /etc/chromium-browser/customizations/01-disable-update-check
+CHROMIUM_FLAGS="${CHROMIUM_FLAGS} --check-for-update-interval=31536000"
+EOF
+
+
 ```
