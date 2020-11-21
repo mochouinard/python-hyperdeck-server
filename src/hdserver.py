@@ -8,6 +8,8 @@ import asyncio
 import websockets
 
 import aiohttp
+import aiohttp_cors
+
 import async_timeout
 from aiohttp import web
 
@@ -19,6 +21,8 @@ import json
 import time
 import git
 
+from asyncio_event import asyncio_event
+ 
 class WSClient:
     def __init__(self, ws):
         self.ws = ws
@@ -29,6 +33,7 @@ class WS:
         self.hdi = hdi
         self.hdi.registerEvent('newmedia', self.notifySlotChange)
         self.hdi.hd.registerEvent('statechanged', self.notifyStateChanged)
+        self.hdi.chat.registerEvent('chatnew', self.notifyChatNew)
 
         repo = git.Repo('.')
 
@@ -37,6 +42,8 @@ class WS:
     async def send_to_all(self, msg) -> None:
         if self._clients:
             await asyncio.wait([client.ws.send(msg) for client in self._clients])
+    async def notifyChatNew(self, args):
+        await self.send_to_all(json.dumps({'type': 'event', 'name': 'chat', 'values': args}));
 
     async def notifySlotChange(self, args):
         await self.send_to_all(json.dumps({'type': 'event', 'name': 'newmedia'}));
@@ -156,6 +163,15 @@ class HTTP:
         response = bytes(out, 'ascii')
         writer.write(response)
         await writer.drain()
+    async def chatin_handler(self, request):
+        data = await request.post()
+        print (data.values())
+        print(vars(request))
+        s = await request._payload.read()
+        p = json.loads(s);
+        print (p)
+        self.hdi.chat.add(p)
+        return web.Response(text='OK')
 
     async def store_fileupload_handler(self, request):
         #data = await request.post()
@@ -383,7 +399,6 @@ class HDServer:
         self._clients.remove(client)
 
 import pyudev
-from asyncio_event import asyncio_event
 import threading
 
 class USBMonitor:
@@ -440,22 +455,54 @@ async def serve():
     #http
     http = HTTP(hdi)
     app = aiohttp.web.Application()
+
+    #cors = aiohttp_cors.setup(app)
+    #resource = cors.add(app.router.add_resource("/chatin"))
+    #route = cors.add(
+    #    resource.add_route("POST", http.chatin_handler), {
+    #        "*": aiohttp_cors.ResourceOptions(allow_methods="*",
+    #                                      allow_headers=("X-Requested-With", "Content-Type", "AUTHORIZATION"),
+    #                                      expose_headers="*",
+    #                                      allow_credentials=False
+    #                                      )
+    #    })
     # index, loaded for all application uls.
     app.router.add_get('/', http.index_handle)
     app.router.add_get('/kiosk/', http.index_kios_handle)
-
+    app.router.add_route("POST", '/chatin', http.chatin_handler)
     app.router.add_post('/upload', http.store_fileupload_handler)
     app.add_routes([web.static('/static', 'html/static/')])
     app.add_routes([web.static('/thumbs', 'thumbs/')])
     app.add_routes([web.static('/videos/', 'videos/')])
+    #app.router.add_route("POST", '/chatin', http.chatin_handler)
+    # Configure default CORS settings.
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+    })
+
+    # Configure CORS on all routes.
+    for route in list(app.router.routes()):
+        cors.add(route)
+        print(route)
+
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, '', '8082')
+    web_port = '8082'
+    ws_port = 8765
+    site = aiohttp.web.TCPSite(runner, '', web_port)
     await site.start()
+    print(f'Serving Web Interface Server on {web_port}')
+
 
     #ws
     ws = WS(hdi)
-    wsserver = await websockets.serve(ws.handler, '', 8765)
+    wsserver = await websockets.serve(ws.handler, '', ws_port)
+    print(f'Serving WebSocket Server on {ws_port}')
+
     await wsserver.wait_closed()
 #import sys
 #import os

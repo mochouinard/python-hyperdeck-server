@@ -1,5 +1,5 @@
 from hdplayer import HyperDeckPlayer
-
+from chat import Chat
 import os
 import shlex
 import subprocess
@@ -13,6 +13,7 @@ from asyncio_event import asyncio_event
 
 class HyperDeckInterface:
     hd =  HyperDeckPlayer()
+    chat = Chat()
     _files = None
     _active_clip = None
     _event = asyncio_event()

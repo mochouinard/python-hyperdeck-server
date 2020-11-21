@@ -10,7 +10,7 @@ Using the Raspberry Pi Install tool, select Raspberry Pi OS Lite (32-bit) [Not t
 Login to your raspberry pi with user pi and run the following command (Require internet access)
 ```console
 sudo apt update
-sudo apt install -y git vlc python3-git ffmpeg python3-websockets python3-aiohttp python3-vlc python3-pyudev python3-psutil
+sudo apt install -y git vlc python3-git ffmpeg python3-websockets python3-aiohttp python3-aiohttp-cors python3-vlc python3-pyudev python3-psutil
 git clone https://github.com/mochouinard/python-hyperdeck-server.git
 
 sudo cp python-hyperdeck-server/systemd/hyperdeckemulator.service /lib/systemd/system/hyperdeckemulator.service

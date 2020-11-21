@@ -33,6 +33,13 @@ main > .container {
 code {
   font-size: 80%;
 }
+
+iframe.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+
+}
 </style>
 <link rel="stylesheet" href="static/dist/bootstrap-4.5.2-dist/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
 <script src="static/js/jquery-3.5.1.min.js"></script>
@@ -208,6 +215,21 @@ function ws_connect() {
 			last_player_update_ts = window.performance.now();
 			last_player_update = j;
 			console.log(last_player_update);
+		} else if (j['type'] == 'event' && j['name'] == 'chat') {
+			mydiv = jQuery('<div/>', {
+    id: '',
+    data: j['values'],
+title: 'now this div has a title!'
+});
+			mydiv.html(j['values']['time'] + ': ' + j['values']['author'] + ': ' + j['values']['message']);
+			mydiv.click(function() {
+				$(this).css("background-color","yellow");
+				ws.send(JSON.stringify({cmd: 'kiosk', do: 'text', field:'myName', value: $(this).data('author')}));
+				ws.send(JSON.stringify({cmd: 'kiosk', do: 'text', field:'myComment', value: $(this).data('message')}));
+				console.log("clicked", $(this).data('author')); 
+			});
+			$("#chat").prepend(mydiv); //"<div>" + j['values']['message'] + "</div>");
+			console.log(j);
 		} else if (j['type'] == 'disk_list') {
 			list = '<ul>';
 			options = '';
@@ -346,6 +368,8 @@ function postFile() {
 }
 </script>
 <body class="d-flex flex-column h-100">
+	 <iframe class="sticky" style="-moz-transform-origin:left top;-webkit-transform:scale(0.15);-moz-transform-scale(0.15);" src="/kiosk/" width="1920" height="1080" ></iframe>
+
   <div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom shadow-sm">
   <h5 class="my-0 mr-md-auto font-weight-normal">HyperDeck Emulator</h5>
   <nav class="my-2 my-md-0 mr-md-3">
@@ -373,9 +397,80 @@ function postFile() {
 
 	<h3>Files</h3>
 	<div id="files"></div>
-  </div>
-</main>
+	<h3>Chat</h3>
+	<div>
+		<a onclick="ws.send(JSON.stringify({'cmd': 'close_media'}));">Close Media</a> - 
+		<a onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'load', 'url':'/static/kiosk/chat.svg'}));">load form</a></br>
+		<a onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'in-left', 'anim-dur':'1s'}));">In Left</a> - 
+		<a onclick="ws.send(JSON.stringify({cmd: 'kiosk', do: 'anim', 'anim-type':'out-left', 'anim-dur':'1s'}));">Out Left</a>
 
+	</div>
+	<div id="chat" style="overflow:auto; height:400px;"></div>
+	<h3>Youtube Script</h3>
+	<textarea rows="20" cols="80">
+(function () {
+  'use strict';
+  var post_url  = "http://127.0.0.1:8082/chatin";
+  var ttt = setTimeout(function () {
+    //iframe chat
+    var iframe = document.getElementById('chatframe');
+    var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+    //actual chat
+    var chat = innerDoc.getElementById("item-offset")
+
+    var config = {
+      attributes: true,
+      childList: true,
+      subtree: true
+    };
+    var prev_msg = '';
+    var callback = function (mutationsList, obseirver) {
+      for (var mutation of mutationsList) {
+        if (mutation.type == "childList" && mutation.target.id == "message") {
+          mutation.addedNodes.forEach(node => {
+          //console.log(node);
+          //var root = node.parentNode.parentNode.parentElement;
+          //console.log(root);
+          var root = node.parentNode.parentNode.parentNode;
+          var author = root.querySelector("#author-name").textContent;
+          var photourl = root.querySelector("#author-photo").querySelector("img").getAttribute("src");
+          var time = root.querySelector("#timestamp").textContent;
+          var message = root.querySelector("#message").textContent;
+	  var chat_badge = 'chat_badges';
+          var xhttp = new XMLHttpRequest();
+		xhttp.open("POST", post_url, true);
+		xhttp.setRequestHeader('Content-type', 'application/json');
+		xhttp.onreadystatechange = function() {
+		   if (this.readyState == 4 && this.status == 200) {
+     // Response
+		      var response = this.responseText; 
+			//console.log(response);
+		   } else {
+		   	//console.log(this.readyState, this.status);
+		   }
+		};
+		if (prev_msg != time+author+message) {
+
+		var data = {time:time,author: author, photourl: photourl, message: message};
+		xhttp.send(JSON.stringify(data));
+		prev_msg = time+author+message;
+		}
+          })
+
+        }
+
+      }
+    };
+
+    var observer = new MutationObserver(callback);
+    observer.observe(chat, config);
+  }, 1000);
+})();
+
+		</textarea>
+  </div>
+
+</main>
 
 <footer class="footer mt-auto py-3">
   <div class="container">

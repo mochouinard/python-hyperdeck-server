@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1920, initial-scale=1, shrink-to-fit=no">
+<meta name="viewport" content="width=1920, initial-scale=1, shrink-to-fit=yes">
 <title>Kios</title>
 <script src="/static/js/jquery-3.5.1.min.js"></script>
 <style>
@@ -10,7 +10,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: grey;
+  background-color: #00b140;
 }
 .in-left {
   animation-name: in-left;
@@ -432,6 +432,26 @@ function ws_connect() {
 					SD = S.getSVGDocument();
 
 					name = j['value'];
+					input = name;
+					var len = 60;
+					var curr = len;
+					var prev = 0;
+
+					output = [];
+
+					while (input[curr]) {
+						if (input[curr++] == ' ') {
+							output.push(input.substring(prev,curr));
+							prev = curr;
+							curr += len;
+						}
+					}
+					output.push(input.substr(prev));
+					//name = '';
+					//for (i = 0; i < output.length; i++) {
+					//	name += output[i] + "\r\n";
+					//}
+					//console.log(output);
 					$($('text[inkscape\\:label="' + j['field'] + '"]', SD)[0].lastChild, SD).text(name);
 
 				} else if (j['do'] == 'reload') {
